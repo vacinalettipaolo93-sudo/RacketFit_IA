@@ -1,27 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { generateTrainingPlan, getStoredApiKey, saveApiKey, removeApiKey, hasEnvApiKey } from './services/geminiService';
-import { UserPreferences, WeeklyPlan, SavedPlan } from './types';
+import { generateTrainingPlan, generateLessonPlan, getStoredApiKey, saveApiKey, removeApiKey, hasEnvApiKey } from './services/geminiService';
+import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan } from './types';
 import { InputForm } from './components/InputForm';
 import { PlanDisplay } from './components/PlanDisplay';
 import { TestsView } from './components/TestsView';
 import { TrackerView } from './components/TrackerView';
 import { ArchiveView } from './components/ArchiveView';
-import { Activity, ClipboardList, Dumbbell, Trophy, Archive, LogOut, User as UserIcon, Lock, Mail, UserPlus, Settings, Key, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { LessonForm } from './components/LessonForm';
+import { LessonDisplay } from './components/LessonDisplay';
+import { Activity, ClipboardList, Dumbbell, Trophy, Archive, LogOut, User as UserIcon, Lock, Mail, UserPlus, Settings, Key, X, CheckCircle, AlertCircle, GraduationCap } from 'lucide-react';
 import { auth, db } from './services/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc } from 'firebase/firestore';
 import { Button } from './components/Button';
 
-type ViewState = 'generator' | 'tests' | 'tracker' | 'archive';
+type ViewState = 'generator' | 'lessons' | 'tests' | 'tracker' | 'archive';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   
   const [currentView, setCurrentView] = useState<ViewState>('generator');
+  
+  // Weekly Plan State
   const [plan, setPlan] = useState<WeeklyPlan | null>(null);
   const [lastPrefs, setLastPrefs] = useState<UserPreferences | null>(null);
   
+  // Lesson Plan State
+  const [lessonPlan, setLessonPlan] = useState<LessonPlan | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,6 +99,7 @@ const App: React.FC = () => {
     try {
       await signOut(auth);
       setPlan(null);
+      setLessonPlan(null);
       setCurrentView('generator');
       setEmail('');
       setPassword('');
@@ -114,6 +122,25 @@ const App: React.FC = () => {
         setShowSettings(true); 
       } else {
         setError("Si è verificato un errore durante la generazione. Verifica la chiave API.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateLesson = async (prefs: LessonPreferences) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const generatedLesson = await generateLessonPlan(prefs);
+      setLessonPlan(generatedLesson);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message === 'API_KEY_MISSING') {
+        setError("Chiave API mancante. Configurala nelle impostazioni.");
+        setShowSettings(true);
+      } else {
+        setError("Errore generazione lezione. Riprova.");
       }
     } finally {
       setIsLoading(false);
@@ -172,6 +199,7 @@ const App: React.FC = () => {
 
   const reset = () => {
     setPlan(null);
+    setLessonPlan(null);
     setError(null);
   };
 
@@ -326,7 +354,6 @@ const App: React.FC = () => {
                   />
                   <p className="text-xs text-gray-500">
                     La chiave verrà salvata nel browser. Ha precedenza su Vercel.
-                    Gratis su <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 underline">Google AI Studio</a>.
                   </p>
                   <Button fullWidth onClick={handleSaveApiKey} disabled={!apiKeyInput.trim()}>
                     Salva Chiave
@@ -336,7 +363,7 @@ const App: React.FC = () => {
             </div>
             
             <div className="bg-gray-50 p-4 rounded-xl text-xs text-gray-500 flex justify-between items-center">
-              <span>Versione App: 1.0.3</span>
+              <span>Versione App: 1.1.0</span>
               {envKeyDetected && <span className="text-green-600 font-semibold">Online</span>}
             </div>
           </div>
@@ -390,6 +417,16 @@ const App: React.FC = () => {
             }`}
           >
             <Dumbbell size={16} /> Generatore
+          </button>
+          <button
+            onClick={() => setCurrentView('lessons')}
+            className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+              currentView === 'lessons' 
+                ? 'border-indigo-600 text-indigo-600' 
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <GraduationCap size={16} /> Lezioni
           </button>
           <button
              onClick={() => setCurrentView('tests')}
@@ -451,7 +488,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Elaborazione...</h3>
             <p className="text-gray-500 text-center max-w-md">
-              Stiamo comunicando con l'AI o salvando i tuoi dati nel cloud.
+              Stiamo creando il tuo programma personalizzato.
             </p>
           </div>
         )}
@@ -463,13 +500,20 @@ const App: React.FC = () => {
           <TrackerView user={user} />
         ) : currentView === 'archive' ? (
           <ArchiveView user={user} onLoadPlan={handleLoadPlan} />
+        ) : currentView === 'lessons' ? (
+          /* Coach / Lesson Mode */
+          !lessonPlan ? (
+             <LessonForm onSubmit={handleGenerateLesson} isLoading={isLoading} />
+          ) : (
+             <LessonDisplay lesson={lessonPlan} onReset={reset} />
+          )
         ) : (
-          /* Generator View */
+          /* Generator View (Default) */
           !plan ? (
             <div className="animate-fade-in-up">
               <InputForm onSubmit={handleGenerate} isLoading={isLoading} />
               
-              {/* Features / Benefits Grid for empty state */}
+              {/* Features / Benefits Grid */}
               <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto no-print">
                 <div className="text-center p-4">
                   <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4 text-teal-700">

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { UserPreferences, WeeklyPlan } from "../types";
+import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan } from "../types";
 
 // Helper functions for manual API Key management
 const STORAGE_KEY = 'gemini_api_key';
@@ -22,49 +22,36 @@ export const hasEnvApiKey = (): boolean => {
   return false;
 };
 
+// --- TRAINING PLAN SCHEMA ---
 const trainingPlanSchema: Schema = {
   type: Type.OBJECT,
   properties: {
-    weeklyGoal: {
-      type: Type.STRING,
-      description: "Brief summary of the week's training objective."
-    },
-    advice: {
-      type: Type.STRING,
-      description: "General advice for the athlete for this specific week."
-    },
+    weeklyGoal: { type: Type.STRING },
+    advice: { type: Type.STRING },
     sessions: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
-          dayName: { type: Type.STRING, description: "e.g., Sessione 1, Martedì, etc." },
-          focusArea: { type: Type.STRING, description: "Main focus of this specific session" },
-          totalDuration: { type: Type.STRING, description: "Estimated total time" },
-          warmup: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "List of warmup exercises"
-          },
+          dayName: { type: Type.STRING },
+          focusArea: { type: Type.STRING },
+          totalDuration: { type: Type.STRING },
+          warmup: { type: Type.ARRAY, items: { type: Type.STRING } },
           mainBlock: {
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
               properties: {
                 name: { type: Type.STRING },
-                description: { type: Type.STRING, description: "Detailed instruction on how to perform the drill" },
-                durationOrReps: { type: Type.STRING, description: "Reps, distance, or time" },
-                rest: { type: Type.STRING, description: "Rest time between sets or reps" },
-                notes: { type: Type.STRING, description: "Optional specific cue" }
+                description: { type: Type.STRING },
+                durationOrReps: { type: Type.STRING },
+                rest: { type: Type.STRING },
+                notes: { type: Type.STRING }
               },
               required: ["name", "description", "durationOrReps", "rest"]
             }
           },
-          cooldown: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "List of cooldown stretches"
-          }
+          cooldown: { type: Type.ARRAY, items: { type: Type.STRING } }
         },
         required: ["dayName", "focusArea", "totalDuration", "warmup", "mainBlock", "cooldown"]
       }
@@ -73,32 +60,74 @@ const trainingPlanSchema: Schema = {
   required: ["weeklyGoal", "sessions", "advice"]
 };
 
-export const generateTrainingPlan = async (prefs: UserPreferences): Promise<WeeklyPlan> => {
-  // Priority: 1. LocalStorage (Manual override) 2. Vite Env (Vercel) 3. Process Env (Node fallback)
+// --- LESSON PLAN SCHEMA ---
+const lessonPlanSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING, description: "Title of the lesson e.g. 'Miglioramento della Volée'" },
+    sport: { type: Type.STRING },
+    mode: { type: Type.STRING },
+    level: { type: Type.STRING },
+    duration: { type: Type.STRING },
+    warmup: { 
+      type: Type.ARRAY, 
+      items: { type: Type.STRING },
+      description: "Technical warmup exercises (minitennis, palleggio controllato)"
+    },
+    basketDrills: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: { type: Type.STRING },
+          description: { type: Type.STRING, description: "Detailed feeding instruction (cesto)" },
+          durationOrReps: { type: Type.STRING, description: "Balls per player or minutes" },
+          rest: { type: Type.STRING },
+          notes: { type: Type.STRING, description: "Technical correction focus" }
+        },
+        required: ["name", "description", "durationOrReps", "rest"]
+      },
+      description: "Exercises using the basket (cesto) for technical mechanics"
+    },
+    liveDrills: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: { type: Type.STRING },
+          description: { type: Type.STRING, description: "Live ball or situational drill" },
+          durationOrReps: { type: Type.STRING },
+          rest: { type: Type.STRING },
+          notes: { type: Type.STRING }
+        },
+        required: ["name", "description", "durationOrReps", "rest"]
+      },
+      description: "Cooperative or competitive drills with live ball"
+    },
+    finalGame: { type: Type.STRING, description: "Description of the final game or points structure" }
+  },
+  required: ["title", "warmup", "basketDrills", "liveDrills", "finalGame"]
+};
+
+const getApiKeyOrThrow = () => {
   let apiKey = getStoredApiKey();
-  
   if (!apiKey) {
     try {
       // @ts-ignore
       apiKey = import.meta.env.VITE_API_KEY;
-    } catch (e) {
-      // Ignore
-    }
+    } catch (e) {}
   }
-
   if (!apiKey) {
     try {
       apiKey = process.env.API_KEY;
-    } catch (e) {
-      // Ignore
-    }
+    } catch (e) {}
   }
-  
-  if (!apiKey) {
-    throw new Error("API_KEY_MISSING");
-  }
+  if (!apiKey) throw new Error("API_KEY_MISSING");
+  return apiKey;
+};
 
-  // Initialize the client only when requested
+export const generateTrainingPlan = async (prefs: UserPreferences): Promise<WeeklyPlan> => {
+  const apiKey = getApiKeyOrThrow();
   const genAI = new GoogleGenAI({ apiKey: apiKey });
   const model = "gemini-2.5-flash";
   
@@ -114,15 +143,11 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
     - Numero di sessioni: ${prefs.sessionsPerWeek}
     
     Vincoli:
-    - DURATA SESSIONE: Ogni sessione deve avere una durata stimata tra i 60 e i 90 minuti (inclusi riscaldamento e defaticamento).
+    - DURATA SESSIONE: Ogni sessione deve avere una durata stimata tra i 60 e i 90 minuti.
     - Gli allenamenti devono essere svolti su un campo da ${prefs.sport} o pista d'atletica.
-    - Attrezzatura minima: Solo racchetta (${prefs.sport === 'Padel' ? 'Pala' : 'Racchetta'}), palline, coni (o riferimenti), corda per saltare. Niente pesi pesanti o macchinari da palestra.
+    - Attrezzatura minima: Solo racchetta, palline, coni, corda. Niente pesi pesanti.
     - Il linguaggio deve essere tecnico ma comprensibile, in ITALIANO.
-    - Adatta l'intensità e la complessità tecnica al livello indicato (${prefs.level}).
-    - Includi esercizi specifici per il ${prefs.sport}. 
-      ${prefs.sport === 'Padel' 
-        ? 'Considera movimenti specifici del Padel: recuperi da vetro, smash, bandeja (movimento a vuoto o con palla), spostamenti brevi e rapidi avanti/indietro.' 
-        : 'Considera movimenti specifici del Tennis: spider drill, navetta, passi incrociati, split step reaction, corsa laterale.'}
+    - Includi esercizi specifici per il ${prefs.sport} (es. ${prefs.sport === 'Padel' ? 'vetri, bandeja' : 'spostamenti laterali, servizio'}).
   `;
 
   try {
@@ -132,16 +157,69 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
       config: {
         responseMimeType: "application/json",
         responseSchema: trainingPlanSchema,
-        systemInstruction: "Sei un coach d'élite specializzato in sport di racchetta. Rispondi sempre con un JSON valido strutturato secondo lo schema fornito. Sii motivante e preciso nei dettagli tecnici."
+        systemInstruction: "Sei un coach d'élite. Rispondi con un JSON valido."
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    return JSON.parse(text) as WeeklyPlan;
+  } catch (error) {
+    console.error("Error generating plan:", error);
+    throw error;
+  }
+};
+
+export const generateLessonPlan = async (prefs: LessonPreferences): Promise<LessonPlan> => {
+  const apiKey = getApiKeyOrThrow();
+  const genAI = new GoogleGenAI({ apiKey: apiKey });
+  const model = "gemini-2.5-flash";
+
+  const prompt = `
+    Sei un Maestro di ${prefs.sport} (Coach) certificato.
+    Crea un piano di lezione (${prefs.duration} minuti) per una lezione ${prefs.mode}.
+    Livello allievi: ${prefs.level}.
+    Focus Tecnico/Tattico: ${prefs.focus}.
+
+    Struttura richiesta:
+    1. Riscaldamento Tecnico (palleggio in minitennis o controllato).
+    2. Esercizi al Cesto (Basket Drills): Fondamentali per correggere la tecnica o creare ritmo. Descrivi come il maestro deve lanciare la palla e cosa deve fare l'allievo.
+    3. Esercizi Live / Situazionali: Scambio tra allievi o con il maestro in gioco.
+    4. Gioco Finale: Punti o tie-break con regole o vincoli specifici.
+
+    Considerazioni Importanti:
+    - Sport: ${prefs.sport}. Se Padel, includi pareti e vetri dove serve.
+    - Modalità: ${prefs.mode}. 
+      Se 'Gruppo', assicurati che gli esercizi tengano tutti attivi (rotazioni veloci).
+      Se 'Coppia', lavora sulla sintonia.
+    - Attrezzatura: Cesto, Racchetta/Pala, Coni.
+    - Lingua: ITALIANO.
+  `;
+
+  try {
+    const response = await genAI.models.generateContent({
+      model: model,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: lessonPlanSchema,
+        systemInstruction: "Sei un maestro di tennis/padel esperto. Crea lezioni dinamiche e ben strutturate."
       }
     });
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     
-    return JSON.parse(text) as WeeklyPlan;
+    const data = JSON.parse(text) as LessonPlan;
+    // Inject user selections back into the object for consistency
+    data.sport = prefs.sport;
+    data.mode = prefs.mode;
+    data.level = prefs.level;
+    data.duration = prefs.duration;
+    
+    return data;
   } catch (error) {
-    console.error("Error generating plan:", error);
+    console.error("Error generating lesson:", error);
     throw error;
   }
 };

@@ -27,6 +27,23 @@ export enum TrainingFocus {
   MIXED = 'Misto (Generale)'
 }
 
+// New Types for Coach Mode
+export enum LessonMode {
+  INDIVIDUAL = 'Individuale (1 giocatore)',
+  COUPLE = 'Coppia (2 giocatori)',
+  GROUP = 'Gruppo (3-4 giocatori)'
+}
+
+export enum LessonFocus {
+  FOREHAND = 'Dritto / Dritto Padel',
+  BACKHAND = 'Rovescio / Rovescio Padel',
+  VOLLEY = 'Volée e Gioco a Rete',
+  OVERHEAD = 'Smash, Vibora, Bandeja',
+  SERVE_RETURN = 'Servizio e Risposta',
+  DEFENSE = 'Difesa e Pareti (Padel) / Recuperi',
+  TACTICS = 'Tattica di Gioco e Situazioni'
+}
+
 export interface Drill {
   name: string;
   description: string;
@@ -50,12 +67,32 @@ export interface WeeklyPlan {
   advice: string;
 }
 
+export interface LessonPlan {
+  title: string;
+  sport: Sport;
+  mode: LessonMode;
+  level: FitnessLevel;
+  duration: string; // 60 or 90 mins
+  warmup: string[]; // Technical warmup
+  basketDrills: Drill[]; // Cesto exercises
+  liveDrills: Drill[]; // Live ball / Situational
+  finalGame: string; // Points or game logic
+}
+
 export interface UserPreferences {
   sport: Sport;
   level: FitnessLevel;
   sessionsPerWeek: SessionCount;
   focus: TrainingFocus;
   phase: 'Pre-season' | 'In-season' | 'Off-season';
+}
+
+export interface LessonPreferences {
+  sport: Sport;
+  level: FitnessLevel;
+  mode: LessonMode;
+  focus: LessonFocus;
+  duration: '60' | '90';
 }
 
 export interface SavedPlan extends WeeklyPlan {
@@ -66,6 +103,9 @@ export interface SavedPlan extends WeeklyPlan {
   level: string;
   userId?: string;
 }
+
+// Reuse saved plan structure for lessons roughly, or create new if strictly needed. 
+// For now we will focus on generating them.
 
 export interface PhysicalTest {
   id: string;
