@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { generateTrainingPlan, getStoredApiKey, saveApiKey, removeApiKey } from './services/geminiService';
+import { generateTrainingPlan, getStoredApiKey, saveApiKey, removeApiKey, hasEnvApiKey } from './services/geminiService';
 import { UserPreferences, WeeklyPlan, SavedPlan } from './types';
 import { InputForm } from './components/InputForm';
 import { PlanDisplay } from './components/PlanDisplay';
 import { TestsView } from './components/TestsView';
 import { TrackerView } from './components/TrackerView';
 import { ArchiveView } from './components/ArchiveView';
-import { Activity, ClipboardList, Dumbbell, Trophy, Archive, LogOut, User as UserIcon, Lock, Mail, UserPlus, Settings, Key, X } from 'lucide-react';
+import { Activity, ClipboardList, Dumbbell, Trophy, Archive, LogOut, User as UserIcon, Lock, Mail, UserPlus, Settings, Key, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { auth, db } from './services/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc } from 'firebase/firestore';
@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [storedKey, setStoredKey] = useState<string | null>(null);
+  const [envKeyDetected, setEnvKeyDetected] = useState(false);
 
   // Monitor Auth State
   useEffect(() => {
@@ -41,8 +42,9 @@ const App: React.FC = () => {
       setUser(currentUser);
       setAuthLoading(false);
     });
-    // Check for stored API key on load
+    // Check for keys on load
     setStoredKey(getStoredApiKey());
+    setEnvKeyDetected(hasEnvApiKey());
     return () => unsubscribe();
   }, []);
 
@@ -108,10 +110,10 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       if (err.message === 'API_KEY_MISSING') {
-        setError("Chiave API mancante. Configurala nelle impostazioni (icona ingranaggio) o su Vercel.");
-        setShowSettings(true); // Auto-open settings if key missing
+        setError("Chiave API mancante. Configurala nelle impostazioni o verifica Vercel.");
+        setShowSettings(true); 
       } else {
-        setError("Si è verificato un errore durante la generazione. Verifica la chiave API o riprova più tardi.");
+        setError("Si è verificato un errore durante la generazione. Verifica la chiave API.");
       }
     } finally {
       setIsLoading(false);
@@ -124,7 +126,7 @@ const App: React.FC = () => {
       setStoredKey(apiKeyInput.trim());
       setApiKeyInput('');
       setShowSettings(false);
-      setError(null); // Clear errors
+      setError(null); 
     }
   };
 
@@ -275,12 +277,37 @@ const App: React.FC = () => {
             
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Google Gemini API Key
+                Stato Connessione AI
+              </label>
+
+              {/* Status Indicators */}
+              <div className="space-y-3 mb-4">
+                {envKeyDetected ? (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
+                    <CheckCircle size={20} className="text-green-600" />
+                    <div>
+                      <p className="text-sm font-bold text-green-800">Chiave Vercel Rilevata</p>
+                      <p className="text-xs text-green-700">L'app sta usando VITE_API_KEY dal server.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
+                     <AlertCircle size={20} className="text-amber-600" />
+                     <div>
+                       <p className="text-sm font-bold text-amber-800">Nessuna chiave server</p>
+                       <p className="text-xs text-amber-700">Inserisci una chiave manuale qui sotto.</p>
+                     </div>
+                  </div>
+                )}
+              </div>
+              
+              <label className="block text-sm font-semibold text-gray-700 mb-2 mt-6">
+                Chiave Manuale (Opzionale)
               </label>
               
               {storedKey ? (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-green-700 font-mono text-sm">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-gray-700 font-mono text-sm">
                     <Key size={16} />
                     <span>••••••••{storedKey.slice(-4)}</span>
                   </div>
@@ -298,8 +325,8 @@ const App: React.FC = () => {
                     className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-tennis-green focus:border-transparent outline-none"
                   />
                   <p className="text-xs text-gray-500">
-                    La chiave verrà salvata nel browser del tuo dispositivo.
-                    Puoi ottenerla gratuitamente da <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 underline">Google AI Studio</a>.
+                    La chiave verrà salvata nel browser. Ha precedenza su Vercel.
+                    Gratis su <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 underline">Google AI Studio</a>.
                   </p>
                   <Button fullWidth onClick={handleSaveApiKey} disabled={!apiKeyInput.trim()}>
                     Salva Chiave
@@ -308,8 +335,9 @@ const App: React.FC = () => {
               )}
             </div>
             
-            <div className="bg-gray-50 p-4 rounded-xl text-xs text-gray-500">
-              <p>Versione App: 1.0.2 (Cloud Enabled)</p>
+            <div className="bg-gray-50 p-4 rounded-xl text-xs text-gray-500 flex justify-between items-center">
+              <span>Versione App: 1.0.3</span>
+              {envKeyDetected && <span className="text-green-600 font-semibold">Online</span>}
             </div>
           </div>
         </div>

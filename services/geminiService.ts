@@ -8,6 +8,20 @@ export const getStoredApiKey = () => localStorage.getItem(STORAGE_KEY);
 export const saveApiKey = (key: string) => localStorage.setItem(STORAGE_KEY, key);
 export const removeApiKey = () => localStorage.removeItem(STORAGE_KEY);
 
+// Check if an Env key exists (Vite or Process)
+export const hasEnvApiKey = (): boolean => {
+  try {
+    // @ts-ignore
+    if (import.meta.env && import.meta.env.VITE_API_KEY) return true;
+  } catch (e) {}
+  
+  try {
+    if (process.env.API_KEY) return true;
+  } catch (e) {}
+  
+  return false;
+};
+
 const trainingPlanSchema: Schema = {
   type: Type.OBJECT,
   properties: {
