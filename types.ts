@@ -96,12 +96,16 @@ export interface LessonPlan {
   finalGame: string; // Points or game logic
 }
 
+export type WarmupType = 'Standard' | 'Game';
+
 export interface UserPreferences {
   sport: Sport;
   level: FitnessLevel;
   sessionsPerWeek: SessionCount;
   focus: TrainingFocus;
   phase: 'Pre-season' | 'In-season' | 'Off-season';
+  includeCognitive: boolean;
+  warmupType: WarmupType;
 }
 
 export interface LessonPreferences {

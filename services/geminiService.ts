@@ -143,7 +143,11 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
     - Obiettivo Settimanale: ${prefs.focus}
     - Numero di sessioni: ${prefs.sessionsPerWeek}
     
-    Vincoli:
+    OPZIONI SPECIALI RICHIESTE:
+    ${prefs.includeCognitive ? '- IMPORTANTE: Integrare task COGNITIVI negli esercizi (es. uso di luci di reazione, chiamata colori pari/dispari, decision making sotto stress durante lo sforzo).' : ''}
+    ${prefs.warmupType === 'Game' ? '- RISCALDAMENTO: Deve essere basato su GIOCHI di attivazione (es. rubabandiera, touch, reazione a specchio) e interazione, NON corsa lineare standard.' : '- RISCALDAMENTO: Standard (corsa, mobilità dinamica e attivazione).'}
+
+    Vincoli Generali:
     - DURATA SESSIONE: Ogni sessione deve avere una durata stimata tra i 60 e i 90 minuti.
     - Gli allenamenti devono essere svolti su un campo da ${prefs.sport} o pista d'atletica.
     - Attrezzatura minima: Solo racchetta, palline, coni, corda. Niente pesi pesanti.

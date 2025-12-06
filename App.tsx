@@ -213,7 +213,9 @@ const App: React.FC = () => {
         level: savedPlan.level as any,
         sessionsPerWeek: '2' as any,
         focus: 'Misto (Generale)' as any,
-        phase: 'In-season'
+        phase: 'In-season',
+        includeCognitive: false, // Default for older plans
+        warmupType: 'Standard' // Default for older plans
     });
   };
 

@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
-import { FitnessLevel, SessionCount, TrainingFocus, UserPreferences, Sport } from '../types';
+import { FitnessLevel, SessionCount, TrainingFocus, UserPreferences, Sport, WarmupType } from '../types';
 import { Button } from './Button';
-import { Dumbbell, Calendar, Zap, Activity, CircleDot, Trophy } from 'lucide-react';
+import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2 } from 'lucide-react';
 
 interface InputFormProps {
   onSubmit: (prefs: UserPreferences) => void;
@@ -14,6 +15,10 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
   const [sessions, setSessions] = useState<SessionCount>(SessionCount.TWO);
   const [focus, setFocus] = useState<TrainingFocus>(TrainingFocus.MIXED);
   const [phase, setPhase] = useState<UserPreferences['phase']>('In-season');
+  
+  // New State for Advanced Options
+  const [includeCognitive, setIncludeCognitive] = useState(false);
+  const [warmupType, setWarmupType] = useState<WarmupType>('Standard');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +27,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
       level,
       sessionsPerWeek: sessions,
       focus,
-      phase
+      phase,
+      includeCognitive,
+      warmupType
     });
   };
 
@@ -37,7 +44,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
         
         {/* Sport Selection */}
         <div className="bg-gray-50 p-1.5 rounded-2xl flex relative">
-           {/* Slider background animation could go here, but simple conditional classes work well */}
            <button
              type="button"
              onClick={() => setSport(Sport.TENNIS)}
@@ -150,6 +156,48 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="border-t border-gray-100 my-4"></div>
+
+        {/* Advanced Options: Cognitive & Warmup */}
+        <div className="space-y-4">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Opzioni Avanzate</h3>
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+                {/* Cognitive Toggle */}
+                <div 
+                  className={`flex-1 p-4 rounded-xl border-2 cursor-pointer transition-all ${includeCognitive ? 'border-purple-500 bg-purple-50' : 'border-gray-100 bg-gray-50 hover:border-gray-200'}`}
+                  onClick={() => setIncludeCognitive(!includeCognitive)}
+                >
+                    <div className="flex justify-between items-center mb-1">
+                        <span className={`font-semibold text-sm ${includeCognitive ? 'text-purple-700' : 'text-gray-600'}`}>Parte Cognitiva</span>
+                        <Brain size={20} className={includeCognitive ? 'text-purple-600' : 'text-gray-400'} />
+                    </div>
+                    <p className="text-xs text-gray-500 leading-tight">Include esercizi di reazione, scelta e memoria.</p>
+                </div>
+
+                {/* Warmup Type */}
+                <div className="flex-1 space-y-2">
+                    <label className="text-xs font-semibold text-gray-500 block">Tipo Riscaldamento</label>
+                    <div className="flex gap-2">
+                         <button
+                           type="button"
+                           onClick={() => setWarmupType('Standard')}
+                           className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 ${warmupType === 'Standard' ? 'bg-orange-100 border-orange-300 text-orange-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
+                         >
+                            <Flame size={14} /> Classico
+                         </button>
+                         <button
+                           type="button"
+                           onClick={() => setWarmupType('Game')}
+                           className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 ${warmupType === 'Game' ? 'bg-green-100 border-green-300 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
+                         >
+                            <Gamepad2 size={14} /> Giochi
+                         </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div className="pt-4">
