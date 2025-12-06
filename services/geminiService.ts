@@ -1,6 +1,13 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { UserPreferences, WeeklyPlan } from "../types";
 
+// Helper functions for manual API Key management
+const STORAGE_KEY = 'gemini_api_key';
+
+export const getStoredApiKey = () => localStorage.getItem(STORAGE_KEY);
+export const saveApiKey = (key: string) => localStorage.setItem(STORAGE_KEY, key);
+export const removeApiKey = () => localStorage.removeItem(STORAGE_KEY);
+
 const trainingPlanSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -53,10 +60,28 @@ const trainingPlanSchema: Schema = {
 };
 
 export const generateTrainingPlan = async (prefs: UserPreferences): Promise<WeeklyPlan> => {
-  const apiKey = process.env.API_KEY;
+  // Priority: 1. LocalStorage (Manual override) 2. Vite Env (Vercel) 3. Process Env (Node fallback)
+  let apiKey = getStoredApiKey();
   
   if (!apiKey) {
-    throw new Error("API Key mancante. Assicurati di aver configurato la variabile d'ambiente API_KEY nelle impostazioni di Vercel.");
+    try {
+      // @ts-ignore
+      apiKey = import.meta.env.VITE_API_KEY;
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  if (!apiKey) {
+    try {
+      apiKey = process.env.API_KEY;
+    } catch (e) {
+      // Ignore
+    }
+  }
+  
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
   }
 
   // Initialize the client only when requested

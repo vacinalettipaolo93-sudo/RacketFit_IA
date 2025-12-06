@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { generateTrainingPlan } from './services/geminiService';
+import { generateTrainingPlan, getStoredApiKey, saveApiKey, removeApiKey } from './services/geminiService';
 import { UserPreferences, WeeklyPlan, SavedPlan } from './types';
 import { InputForm } from './components/InputForm';
 import { PlanDisplay } from './components/PlanDisplay';
 import { TestsView } from './components/TestsView';
 import { TrackerView } from './components/TrackerView';
 import { ArchiveView } from './components/ArchiveView';
-import { Activity, ClipboardList, Dumbbell, Trophy, Archive, LogOut, User as UserIcon, Lock, Mail, UserPlus } from 'lucide-react';
+import { Activity, ClipboardList, Dumbbell, Trophy, Archive, LogOut, User as UserIcon, Lock, Mail, UserPlus, Settings, Key, X } from 'lucide-react';
 import { auth, db } from './services/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc } from 'firebase/firestore';
@@ -30,12 +30,19 @@ const App: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
+  // Settings / API Key State
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [storedKey, setStoredKey] = useState<string | null>(null);
+
   // Monitor Auth State
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
     });
+    // Check for stored API key on load
+    setStoredKey(getStoredApiKey());
     return () => unsubscribe();
   }, []);
 
@@ -98,11 +105,32 @@ const App: React.FC = () => {
     try {
       const generatedPlan = await generateTrainingPlan(prefs);
       setPlan(generatedPlan);
-    } catch (err) {
-      setError("Si è verificato un errore durante la generazione del programma. Riprova più tardi.");
+    } catch (err: any) {
+      console.error(err);
+      if (err.message === 'API_KEY_MISSING') {
+        setError("Chiave API mancante. Configurala nelle impostazioni (icona ingranaggio) o su Vercel.");
+        setShowSettings(true); // Auto-open settings if key missing
+      } else {
+        setError("Si è verificato un errore durante la generazione. Verifica la chiave API o riprova più tardi.");
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSaveApiKey = () => {
+    if (apiKeyInput.trim()) {
+      saveApiKey(apiKeyInput.trim());
+      setStoredKey(apiKeyInput.trim());
+      setApiKeyInput('');
+      setShowSettings(false);
+      setError(null); // Clear errors
+    }
+  };
+
+  const handleRemoveApiKey = () => {
+    removeApiKey();
+    setStoredKey(null);
   };
 
   const handleSavePlan = async (title: string) => {
@@ -230,8 +258,63 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 pb-20">
+    <div className="min-h-screen bg-gray-50 text-gray-900 pb-20 relative">
       
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl animate-fade-in-up">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <Settings className="text-tennis-dark" /> Impostazioni
+              </h2>
+              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Google Gemini API Key
+              </label>
+              
+              {storedKey ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-green-700 font-mono text-sm">
+                    <Key size={16} />
+                    <span>••••••••{storedKey.slice(-4)}</span>
+                  </div>
+                  <Button variant="danger" onClick={handleRemoveApiKey} className="px-3 py-1 text-xs">
+                    Rimuovi
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    type="password"
+                    placeholder="Incolla qui la tua chiave (AIza...)"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-tennis-green focus:border-transparent outline-none"
+                  />
+                  <p className="text-xs text-gray-500">
+                    La chiave verrà salvata nel browser del tuo dispositivo.
+                    Puoi ottenerla gratuitamente da <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 underline">Google AI Studio</a>.
+                  </p>
+                  <Button fullWidth onClick={handleSaveApiKey} disabled={!apiKeyInput.trim()}>
+                    Salva Chiave
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-xl text-xs text-gray-500">
+              <p>Versione App: 1.0.2 (Cloud Enabled)</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-md bg-white/80">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -244,14 +327,23 @@ const App: React.FC = () => {
             </h1>
           </div>
           
-          <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+          <div className="flex items-center gap-2 sm:gap-4">
+             <div className="hidden sm:flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
                 <UserIcon size={16} />
-                <span className="hidden sm:inline">{user.email?.split('@')[0]}</span>
+                <span>{user.email?.split('@')[0]}</span>
              </div>
+             
+             <button 
+               onClick={() => setShowSettings(true)}
+               className="text-gray-400 hover:text-tennis-dark transition-colors p-2 rounded-full hover:bg-gray-100"
+               title="Impostazioni"
+             >
+               <Settings size={20} />
+             </button>
+
              <button 
                onClick={handleLogout}
-               className="text-gray-400 hover:text-red-500 transition-colors p-2"
+               className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-gray-100"
                title="Disconnetti"
              >
                <LogOut size={20} />
@@ -309,8 +401,13 @@ const App: React.FC = () => {
         
         {/* Error Message */}
         {error && (
-          <div className="max-w-xl mx-auto mb-8 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-center justify-center text-center">
-            {error}
+          <div className="max-w-xl mx-auto mb-8 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex flex-col items-center justify-center text-center gap-2">
+            <p>{error}</p>
+            {error.includes("Chiave API") && (
+              <Button variant="secondary" onClick={() => setShowSettings(true)} className="py-1 px-4 text-sm">
+                Inserisci Chiave
+              </Button>
+            )}
           </div>
         )}
 
