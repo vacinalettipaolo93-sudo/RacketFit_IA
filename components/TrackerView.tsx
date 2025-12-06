@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TestResult } from '../types';
 import { TESTS_DATA } from './TestsView';
 import { Button } from './Button';
-import { Trash2, User as UserIcon, Calendar, ClipboardCheck, History, AlertTriangle } from 'lucide-react';
+import { Trash2, User as UserIcon, Calendar, ClipboardCheck, History } from 'lucide-react';
 import { db } from '../services/firebase';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { User } from 'firebase/auth';
@@ -18,36 +18,21 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ user }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Sync with Firestore
   useEffect(() => {
     if (!user) return;
-    setLoading(true);
-    setError(null);
 
     const q = query(collection(db, 'users', user.uid, 'test_results'), orderBy('date', 'desc'));
     
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        const fetchedResults: TestResult[] = [];
-        snapshot.forEach((doc) => {
-          fetchedResults.push({ id: doc.id, ...doc.data() } as TestResult);
-        });
-        setResults(fetchedResults);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error("Firestore Error:", err);
-        if (err.code === 'permission-denied') {
-          setError("Permesso negato: Configura le 'Security Rules' su Firestore Console.");
-        } else {
-          setError("Errore nel caricamento dei dati: " + err.message);
-        }
-        setLoading(false);
-      }
-    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedResults: TestResult[] = [];
+      snapshot.forEach((doc) => {
+        fetchedResults.push({ id: doc.id, ...doc.data() } as TestResult);
+      });
+      setResults(fetchedResults);
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, [user]);
@@ -70,13 +55,9 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ user }) => {
     try {
       await addDoc(collection(db, 'users', user.uid, 'test_results'), newResult);
       setValue('');
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error adding result:", error);
-      if (error.code === 'permission-denied') {
-        alert("Errore di permessi: Non puoi scrivere nel database. Controlla le regole Firebase.");
-      } else {
-        alert("Errore nel salvataggio.");
-      }
+      alert("Errore nel salvataggio.");
     }
   };
 
@@ -185,15 +166,7 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ user }) => {
           <History size={20} className="text-tennis-accent" /> Registro Storico
         </h3>
         
-        {error ? (
-          <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-center gap-3">
-             <AlertTriangle size={24} />
-             <div>
-               <p className="font-bold">Errore di Connessione al Database</p>
-               <p className="text-sm">{error}</p>
-             </div>
-          </div>
-        ) : loading ? (
+        {loading ? (
             <div className="text-center py-8 text-gray-400">Caricamento risultati...</div>
         ) : results.length === 0 ? (
           <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">

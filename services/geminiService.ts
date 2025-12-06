@@ -1,8 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { UserPreferences, WeeklyPlan } from "../types";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const trainingPlanSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -55,6 +53,14 @@ const trainingPlanSchema: Schema = {
 };
 
 export const generateTrainingPlan = async (prefs: UserPreferences): Promise<WeeklyPlan> => {
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("API Key mancante. Assicurati di aver configurato la variabile d'ambiente API_KEY nelle impostazioni di Vercel.");
+  }
+
+  // Initialize the client only when requested
+  const genAI = new GoogleGenAI({ apiKey: apiKey });
   const model = "gemini-2.5-flash";
   
   const prompt = `

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SavedPlan } from '../types';
-import { Trash2, Download, Calendar, Dumbbell, Trophy, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Trash2, Download, Calendar, Dumbbell, Trophy, ArrowRight, CloudOff } from 'lucide-react';
 import { db } from '../services/firebase';
 import { collection, query, onSnapshot, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { User } from 'firebase/auth';
@@ -13,35 +13,20 @@ interface ArchiveViewProps {
 export const ArchiveView: React.FC<ArchiveViewProps> = ({ onLoadPlan, user }) => {
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    setLoading(true);
-    setError(null);
 
     const q = query(collection(db, 'users', user.uid, 'plans'), orderBy('createdAt', 'desc'));
     
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        const plans: SavedPlan[] = [];
-        snapshot.forEach((doc) => {
-          plans.push({ id: doc.id, ...doc.data() } as SavedPlan);
-        });
-        setSavedPlans(plans);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error("Firestore Error:", err);
-        if (err.code === 'permission-denied') {
-          setError("Permesso negato: Configura le 'Security Rules' su Firestore Console.");
-        } else {
-          setError("Errore nel caricamento dei dati: " + err.message);
-        }
-        setLoading(false);
-      }
-    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const plans: SavedPlan[] = [];
+      snapshot.forEach((doc) => {
+        plans.push({ id: doc.id, ...doc.data() } as SavedPlan);
+      });
+      setSavedPlans(plans);
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, [user]);
@@ -78,15 +63,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ onLoadPlan, user }) =>
         <p className="text-gray-500">I tuoi allenamenti salvati online, sicuri e pronti.</p>
       </div>
 
-      {error ? (
-        <div className="max-w-2xl mx-auto p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-center gap-3">
-            <AlertTriangle size={24} />
-            <div>
-              <p className="font-bold">Errore di Accesso ai Dati</p>
-              <p className="text-sm">{error}</p>
-            </div>
-        </div>
-      ) : savedPlans.length === 0 ? (
+      {savedPlans.length === 0 ? (
         <div className="text-center py-16 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
           <Download className="mx-auto h-12 w-12 text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900">Nessun programma salvato</h3>
