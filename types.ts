@@ -121,6 +121,12 @@ export interface SavedPlan extends WeeklyPlan {
   userId?: string;
 }
 
+export interface SavedLessonPlan extends LessonPlan {
+  id: string;
+  createdAt: string;
+  userId?: string;
+}
+
 export interface PhysicalTest {
   id: string;
   name: string;

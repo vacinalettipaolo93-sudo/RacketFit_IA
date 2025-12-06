@@ -1,14 +1,30 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { LessonPlan } from '../types';
 import { Button } from './Button';
-import { Download, PlayCircle, Users, Clock, CheckCircle, Disc } from 'lucide-react';
+import { Download, PlayCircle, Users, Clock, CheckCircle, Disc, Save, Check } from 'lucide-react';
 
 interface LessonDisplayProps {
   lesson: LessonPlan;
   onReset: () => void;
+  onSave?: (lesson: LessonPlan) => void;
 }
 
-export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset }) => {
+export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, onSave }) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  const handleSaveClick = () => {
+    if (hasSaved || !onSave) return;
+    setIsSaving(true);
+    onSave(lesson);
+    setHasSaved(true);
+    setTimeout(() => {
+      setHasSaved(false);
+      setIsSaving(false);
+    }, 3000);
+  };
+
   return (
     <div className="max-w-3xl mx-auto pb-12 animate-fade-in print-content">
       
@@ -110,6 +126,19 @@ export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset })
         <Button onClick={onReset} variant="outline" className="w-full sm:w-auto">
           Crea Nuova Lezione
         </Button>
+
+        {onSave && (
+          <Button 
+            onClick={handleSaveClick} 
+            variant="primary" 
+            className={`w-full sm:w-auto flex items-center justify-center gap-2 ${hasSaved ? 'bg-green-600 text-white border-green-600' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+            disabled={hasSaved || isSaving}
+          >
+            {hasSaved ? <Check size={18} /> : <Save size={18} />}
+            {hasSaved ? 'Salvata in Archivio' : 'Salva Lezione'}
+          </Button>
+        )}
+
         <Button onClick={() => window.print()} variant="secondary" className="w-full sm:w-auto flex items-center justify-center gap-2">
           <Download size={18} /> Stampa Scheda
         </Button>

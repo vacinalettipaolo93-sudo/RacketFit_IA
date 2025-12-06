@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { generateTrainingPlan, generateLessonPlan, getStoredApiKey, saveApiKey, removeApiKey, hasEnvApiKey } from './services/geminiService';
-import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan } from './types';
+import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan, SavedLessonPlan } from './types';
 import { InputForm } from './components/InputForm';
 import { PlanDisplay } from './components/PlanDisplay';
 import { TestsView } from './components/TestsView';
@@ -185,6 +186,25 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveLesson = async (lesson: LessonPlan) => {
+    if (!user) return;
+    setIsLoading(true);
+    const newSavedLesson: Omit<SavedLessonPlan, 'id'> = {
+      ...lesson,
+      createdAt: new Date().toISOString(),
+      userId: user.uid
+    };
+
+    try {
+      await addDoc(collection(db, 'users', user.uid, 'lessons'), newSavedLesson);
+    } catch (e) {
+      console.error("Error saving lesson: ", e);
+      setError("Errore nel salvataggio lezione.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleLoadPlan = (savedPlan: SavedPlan) => {
     setPlan(savedPlan);
     setCurrentView('generator');
@@ -195,6 +215,11 @@ const App: React.FC = () => {
         focus: 'Misto (Generale)' as any,
         phase: 'In-season'
     });
+  };
+
+  const handleLoadLesson = (savedLesson: SavedLessonPlan) => {
+    setLessonPlan(savedLesson);
+    setCurrentView('lessons');
   };
 
   const reset = () => {
@@ -488,7 +513,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Elaborazione...</h3>
             <p className="text-gray-500 text-center max-w-md">
-              Stiamo creando il tuo programma personalizzato.
+              Stiamo salvando o generando il tuo programma.
             </p>
           </div>
         )}
@@ -499,13 +524,13 @@ const App: React.FC = () => {
         ) : currentView === 'tracker' ? (
           <TrackerView user={user} />
         ) : currentView === 'archive' ? (
-          <ArchiveView user={user} onLoadPlan={handleLoadPlan} />
+          <ArchiveView user={user} onLoadPlan={handleLoadPlan} onLoadLesson={handleLoadLesson} />
         ) : currentView === 'lessons' ? (
           /* Coach / Lesson Mode */
           !lessonPlan ? (
              <LessonForm onSubmit={handleGenerateLesson} isLoading={isLoading} />
           ) : (
-             <LessonDisplay lesson={lessonPlan} onReset={reset} />
+             <LessonDisplay lesson={lessonPlan} onReset={reset} onSave={handleSaveLesson} />
           )
         ) : (
           /* Generator View (Default) */
