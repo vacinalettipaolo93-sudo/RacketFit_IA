@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { PhysicalTest } from '../types';
-import { ChevronDown, ChevronUp, Timer, Ruler, Activity, Dumbbell } from 'lucide-react';
+import { ChevronDown, ChevronUp, Timer, Ruler, Activity, Dumbbell, Eye, Move } from 'lucide-react';
 
 export const TESTS_DATA: PhysicalTest[] = [
   {
@@ -19,6 +20,21 @@ export const TESTS_DATA: PhysicalTest[] = [
     measurement: "Tempo totale (in secondi). Un buon tempo per agonisti è sotto i 18-19 secondi."
   },
   {
+    id: 'hexagon',
+    name: 'Test dell\'Esagono (Hexagon Test)',
+    category: 'Agility',
+    description: "Gold standard per valutare l'agilità dei piedi (footwork), equilibrio e velocità in spazi stretti.",
+    equipment: "Nastro adesivo o gesso, cronometro. Disegnare un esagono con lati di 60cm e angoli di 120 gradi.",
+    procedure: [
+      "L'atleta parte al centro dell'esagono.",
+      "Al via, salta a piedi uniti fuori dall'esagono oltre un lato e ritorna subito al centro.",
+      "Procede in senso orario saltando fuori e dentro per tutti i 6 lati.",
+      "Esegui 3 giri completi senza fermarti.",
+      "Se si tocca una linea, il test va ripetuto o si aggiunge penalità."
+    ],
+    measurement: "Tempo totale per completare i 3 giri (secondi)."
+  },
+  {
     id: 'cooper',
     name: 'Test di Cooper (12 Minuti)',
     category: 'Endurance',
@@ -32,6 +48,20 @@ export const TESTS_DATA: PhysicalTest[] = [
       "Allo scadere dei 12 minuti, conta i giri completi e i metri dell'ultimo giro parziale."
     ],
     measurement: "Numero di GIRI completati. (Esempio: 30 giri = 2100m circa). >35 giri è un ottimo risultato."
+  },
+  {
+    id: 'sprint-20m',
+    name: 'Sprint 20 Metri',
+    category: 'Power',
+    description: "Valuta l'accelerazione pura su una distanza che copre la lunghezza del campo.",
+    equipment: "Metro a nastro, cronometro, 2 coni.",
+    procedure: [
+      "Posiziona due coni a 20 metri di distanza.",
+      "Partenza da fermo dietro la linea (piede anteriore dietro la linea).",
+      "Al segnale, scatta alla massima velocità oltre il secondo cono.",
+      "Esegui 2-3 tentativi con recupero completo."
+    ],
+    measurement: "Miglior tempo in secondi."
   },
   {
     id: 'broad-jump',
@@ -49,6 +79,20 @@ export const TESTS_DATA: PhysicalTest[] = [
     measurement: "Distanza (in cm/metri). >220cm è un buon riferimento per maschi agonisti, >180cm per femmine."
   },
   {
+    id: 'lateral-hops',
+    name: 'Saltelli Laterali (30 sec)',
+    category: 'Agility',
+    description: "Test di resistenza alla forza esplosiva laterale e stabilità delle caviglie.",
+    equipment: "Cronometro, una linea a terra o ostacolino basso (<5cm).",
+    procedure: [
+      "Stai in piedi con la linea laterale a destra.",
+      "Al via, salta a piedi uniti (o un piede, se specifico) oltre la linea e torna indietro continuamente.",
+      "Conta ogni contatto con il suolo come 1 (oppure ogni ciclo completo).",
+      "Continua alla massima velocità per 30 secondi."
+    ],
+    measurement: "Numero totale di salti/contatti in 30 secondi."
+  },
+  {
     id: 'shuttle-10x5',
     name: 'Navetta 10 x 5 metri',
     category: 'Agility',
@@ -62,6 +106,21 @@ export const TESTS_DATA: PhysicalTest[] = [
       "Il cronometro si ferma quando attraversi la linea finale al decimo tratto."
     ],
     measurement: "Tempo totale (secondi). Fondamentale non scivolare nelle curve."
+  },
+  {
+    id: 'wall-toss',
+    name: 'Test Lancio al Muro (Wall Toss)',
+    category: 'Coordination',
+    description: "Test di coordinazione oculo-manuale (Hand-Eye Coordination).",
+    equipment: "Palla da tennis, muro liscio, metro, cronometro.",
+    procedure: [
+      "Stai in piedi a 2 metri di distanza dal muro.",
+      "Lancia la palla con la mano DESTRA contro il muro e afferrala con la SINISTRA.",
+      "Lancia subito con la SINISTRA e afferra con la DESTRA.",
+      "Continua alternando per 30 secondi.",
+      "La palla deve essere lanciata dal basso verso l'alto."
+    ],
+    measurement: "Numero di prese corrette in 30 secondi."
   },
   {
     id: 'plank',
@@ -89,6 +148,20 @@ export const TESTS_DATA: PhysicalTest[] = [
       "Le pause sono ammesse solo nella posizione alta."
     ],
     measurement: "Numero di ripetizioni corrette."
+  },
+  {
+    id: 'sit-reach',
+    name: 'Sit and Reach',
+    category: 'Flexibility',
+    description: "Misura la flessibilità della bassa schiena e dei muscoli ischiocrurali (femorali).",
+    equipment: "Box per sit and reach o un metro a terra e un nastro adesivo (linea dello zero a 15 pollici/38cm).",
+    procedure: [
+      "Siediti a terra gambe tese, piedi nudi contro il box (o al segno).",
+      "Sovrapponi le mani e spingiti in avanti lentamente lungo il metro espirando.",
+      "Mantieni la posizione massima per 2 secondi senza piegare le ginocchia.",
+      "Non molleggiare."
+    ],
+    measurement: "Distanza raggiunta in cm."
   }
 ];
 
@@ -103,8 +176,10 @@ export const TestsView: React.FC = () => {
     switch(category) {
       case 'Agility': return <Activity size={20} className="text-blue-500" />;
       case 'Endurance': return <Timer size={20} className="text-red-500" />;
-      case 'Power': return <Activity size={20} className="text-orange-500" />; // Zap alternative
+      case 'Power': return <Activity size={20} className="text-orange-500" />;
       case 'Strength': return <Dumbbell size={20} className="text-purple-500" />;
+      case 'Coordination': return <Eye size={20} className="text-teal-500" />;
+      case 'Flexibility': return <Move size={20} className="text-pink-500" />;
       default: return <Activity size={20} />;
     }
   };

@@ -134,7 +134,7 @@ export interface SavedLessonPlan extends LessonPlan {
 export interface PhysicalTest {
   id: string;
   name: string;
-  category: 'Agility' | 'Endurance' | 'Power' | 'Strength';
+  category: 'Agility' | 'Endurance' | 'Power' | 'Strength' | 'Coordination' | 'Flexibility';
   description: string;
   equipment: string;
   procedure: string[];
