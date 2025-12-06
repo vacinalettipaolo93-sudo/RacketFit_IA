@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { FitnessLevel, LessonFocus, LessonMode, LessonPreferences, Sport } from '../types';
+
+import React, { useState, useEffect } from 'react';
+import { FitnessLevel, LessonMode, LessonPreferences, Sport, TENNIS_LESSON_FOCUS, PADEL_LESSON_FOCUS } from '../types';
 import { Button } from './Button';
 import { Users, Clock, Target, CircleDot, Trophy, GraduationCap } from 'lucide-react';
 
@@ -12,8 +13,18 @@ export const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, isLoading }) =
   const [sport, setSport] = useState<Sport>(Sport.TENNIS);
   const [level, setLevel] = useState<FitnessLevel>(FitnessLevel.INTERMEDIATE);
   const [mode, setMode] = useState<LessonMode>(LessonMode.INDIVIDUAL);
-  const [focus, setFocus] = useState<LessonFocus>(LessonFocus.FOREHAND);
+  
+  // Initialize with the first option of the default sport
+  const [focus, setFocus] = useState<string>(TENNIS_LESSON_FOCUS[0]);
   const [duration, setDuration] = useState<'60' | '90'>('60');
+
+  // Determine which options to show based on selected sport
+  const currentFocusOptions = sport === Sport.TENNIS ? TENNIS_LESSON_FOCUS : PADEL_LESSON_FOCUS;
+
+  // Reset focus when sport changes to prevent mismatched data (e.g. asking for "Vibora" in Tennis)
+  useEffect(() => {
+    setFocus(currentFocusOptions[0]);
+  }, [sport]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +51,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, isLoading }) =
              className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
                sport === Sport.TENNIS 
                  ? 'bg-white text-tennis-dark shadow-md' 
-                 : 'text-gray-500'
+                 : 'text-gray-500 hover:bg-white/50'
              }`}
            >
              <CircleDot size={18} className={sport === Sport.TENNIS ? 'text-tennis-green' : ''} />
@@ -52,7 +63,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, isLoading }) =
              className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
                sport === Sport.PADEL 
                  ? 'bg-white text-blue-900 shadow-md' 
-                 : 'text-gray-500'
+                 : 'text-gray-500 hover:bg-white/50'
              }`}
            >
              <Trophy size={18} className={sport === Sport.PADEL ? 'text-blue-500' : ''} />
@@ -89,7 +100,7 @@ export const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, isLoading }) =
            <select 
               value={level}
               onChange={(e) => setLevel(e.target.value as FitnessLevel)}
-              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
             >
               {Object.values(FitnessLevel).map((l) => (
                 <option key={l} value={l}>{l}</option>
@@ -105,10 +116,10 @@ export const LessonForm: React.FC<LessonFormProps> = ({ onSubmit, isLoading }) =
             </label>
             <select 
               value={focus}
-              onChange={(e) => setFocus(e.target.value as LessonFocus)}
-              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
+              onChange={(e) => setFocus(e.target.value)}
+              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
             >
-              {Object.values(LessonFocus).map((f) => (
+              {currentFocusOptions.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>

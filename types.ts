@@ -1,3 +1,4 @@
+
 export enum Sport {
   TENNIS = 'Tennis',
   PADEL = 'Padel'
@@ -34,15 +35,30 @@ export enum LessonMode {
   GROUP = 'Gruppo (3-4 giocatori)'
 }
 
-export enum LessonFocus {
-  FOREHAND = 'Dritto / Dritto Padel',
-  BACKHAND = 'Rovescio / Rovescio Padel',
-  VOLLEY = 'Volée e Gioco a Rete',
-  OVERHEAD = 'Smash, Vibora, Bandeja',
-  SERVE_RETURN = 'Servizio e Risposta',
-  DEFENSE = 'Difesa e Pareti (Padel) / Recuperi',
-  TACTICS = 'Tattica di Gioco e Situazioni'
-}
+// Specific lists for Dropdowns
+export const TENNIS_LESSON_FOCUS = [
+  'Dritto (Topspin/Piatto)',
+  'Rovescio (Topspin/Back)',
+  'Volée e Gioco a Rete',
+  'Smash e Colpi sopra la testa',
+  'Servizio e Risposta',
+  'Approccio a rete e Chiusura',
+  'Difesa e Recupero da fondo',
+  'Tattica Singolare',
+  'Tattica Doppio'
+];
+
+export const PADEL_LESSON_FOCUS = [
+  'Dritto e Rovescio (Fondo campo)',
+  'Uscita di Parete (Bajada)',
+  'Volée (Blocco, Attacco, Transizione)',
+  'Bandeja e Vibora',
+  'Smash (x3, x4, Gancho)',
+  'Globo (Pallonetto) e Difesa alta',
+  'Servizio e Risposta',
+  'Gioco con i Vetri / Doppia Parete',
+  'Tattica di Coppia'
+];
 
 export interface Drill {
   name: string;
@@ -91,7 +107,7 @@ export interface LessonPreferences {
   sport: Sport;
   level: FitnessLevel;
   mode: LessonMode;
-  focus: LessonFocus;
+  focus: string;
   duration: '60' | '90';
 }
 
@@ -103,9 +119,6 @@ export interface SavedPlan extends WeeklyPlan {
   level: string;
   userId?: string;
 }
-
-// Reuse saved plan structure for lessons roughly, or create new if strictly needed. 
-// For now we will focus on generating them.
 
 export interface PhysicalTest {
   id: string;
