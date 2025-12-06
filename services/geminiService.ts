@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan } from "../types";
 
@@ -190,7 +191,8 @@ export const generateLessonPlan = async (prefs: LessonPreferences): Promise<Less
     Considerazioni Importanti:
     - Sport: ${prefs.sport}. Se Padel, includi pareti e vetri dove serve.
     - Modalità: ${prefs.mode}. 
-      Se 'Gruppo', assicurati che gli esercizi tengano tutti attivi (rotazioni veloci).
+      Se 'Gruppo (3 giocatori)': Sfrutta schemi 2 contro 1 (es. "Americano"), o rotazioni rapide dove il maestro gioca in coppia.
+      Se 'Gruppo (4 giocatori)': Crea situazioni di DOPPIO REALE. Lavora su tattiche di coppia, sincronia a rete/fondo.
       Se 'Coppia', lavora sulla sintonia.
     - Attrezzatura: Cesto, Racchetta/Pala, Coni.
     - Lingua: ITALIANO.

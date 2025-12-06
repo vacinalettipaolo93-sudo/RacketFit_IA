@@ -32,7 +32,8 @@ export enum TrainingFocus {
 export enum LessonMode {
   INDIVIDUAL = 'Individuale (1 giocatore)',
   COUPLE = 'Coppia (2 giocatori)',
-  GROUP = 'Gruppo (3-4 giocatori)'
+  GROUP_3 = 'Gruppo (3 giocatori)',
+  GROUP_4 = 'Gruppo (4 giocatori)'
 }
 
 // Specific lists for Dropdowns
