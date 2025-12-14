@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { FitnessLevel, SessionCount, TrainingFocus, UserPreferences, Sport, WarmupType } from '../types';
+import { FitnessLevel, SessionCount, TrainingFocus, UserPreferences, Sport, WarmupType, GroupSize } from '../types';
 import { Button } from './Button';
-import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2 } from 'lucide-react';
+import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2, Users } from 'lucide-react';
 
 interface InputFormProps {
   onSubmit: (prefs: UserPreferences) => void;
@@ -11,6 +11,7 @@ interface InputFormProps {
 
 export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
   const [sport, setSport] = useState<Sport>(Sport.TENNIS);
+  const [groupSize, setGroupSize] = useState<GroupSize>(GroupSize.ONE);
   const [level, setLevel] = useState<FitnessLevel>(FitnessLevel.INTERMEDIATE);
   const [sessions, setSessions] = useState<SessionCount>(SessionCount.TWO);
   const [focus, setFocus] = useState<TrainingFocus>(TrainingFocus.MIXED);
@@ -24,6 +25,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
     e.preventDefault();
     onSubmit({
       sport,
+      groupSize,
       level,
       sessionsPerWeek: sessions,
       focus,
@@ -68,6 +70,29 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
              <Trophy size={18} className={sport === Sport.PADEL ? 'text-blue-500' : ''} />
              Padel
            </button>
+        </div>
+
+        {/* Group Size */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+            <Users size={18} className="text-tennis-accent" /> Numero Atleti
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {Object.values(GroupSize).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGroupSize(g)}
+                className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border transition-all truncate ${
+                  groupSize === g 
+                    ? 'bg-tennis-dark text-white border-tennis-dark shadow-md' 
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-tennis-dark'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Level */}

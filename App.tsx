@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { generateTrainingPlan, generateLessonPlan, getStoredApiKey, saveApiKey, removeApiKey, hasEnvApiKey } from './services/geminiService';
-import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan, SavedLessonPlan } from './types';
+import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan, SavedLessonPlan, GroupSize } from './types';
 import { InputForm } from './components/InputForm';
 import { PlanDisplay } from './components/PlanDisplay';
 import { TestsView } from './components/TestsView';
@@ -215,7 +215,8 @@ const App: React.FC = () => {
         focus: 'Misto (Generale)' as any,
         phase: 'In-season',
         includeCognitive: false, // Default for older plans
-        warmupType: 'Standard' // Default for older plans
+        warmupType: 'Standard', // Default for older plans
+        groupSize: GroupSize.ONE // Default for older plans
     });
   };
 

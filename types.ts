@@ -19,6 +19,14 @@ export enum SessionCount {
   FIVE = '5'
 }
 
+export enum GroupSize {
+  ONE = '1 Persona',
+  TWO = '2 Persone',
+  THREE = '3 Persone',
+  FOUR = '4 Persone',
+  GROUP = 'Gruppo (5+)'
+}
+
 export enum TrainingFocus {
   SPEED_AGILITY = 'Velocità e Agilità (Footwork)',
   POWER_EXPLOSIVENESS = 'Potenza ed Esplosività',
@@ -100,6 +108,7 @@ export type WarmupType = 'Standard' | 'Game';
 
 export interface UserPreferences {
   sport: Sport;
+  groupSize: GroupSize;
   level: FitnessLevel;
   sessionsPerWeek: SessionCount;
   focus: TrainingFocus;

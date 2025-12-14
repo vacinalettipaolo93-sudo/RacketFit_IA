@@ -143,16 +143,23 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
     - Obiettivo Settimanale: ${prefs.focus}
     - Numero di sessioni: ${prefs.sessionsPerWeek}
     
-    OPZIONI SPECIALI RICHIESTE:
-    ${prefs.includeCognitive ? '- IMPORTANTE: Integrare task COGNITIVI negli esercizi (es. uso di luci di reazione, chiamata colori pari/dispari, decision making sotto stress durante lo sforzo).' : ''}
-    ${prefs.warmupType === 'Game' ? '- RISCALDAMENTO: Deve essere basato su GIOCHI di attivazione (es. rubabandiera, touch, reazione a specchio) e interazione, NON corsa lineare standard.' : '- RISCALDAMENTO: Standard (corsa, mobilità dinamica e attivazione).'}
+    CONFIGURAZIONE GRUPPO:
+    - Numero Partecipanti: ${prefs.groupSize}
+    - ORGANIZZAZIONE: Gli esercizi DEVONO essere ottimizzati per questo numero di persone.
+      * Se 1 Persona: Focus individuale, tecnica analitica.
+      * Se 2 Persone: Usa lavori a specchio, staffette a coppie, competizione diretta, lancio palla reciproco.
+      * Se 3-4 Persone: Piccoli circuiti, staffette, gestione spazi.
+      * Se Gruppo (5+): Gestione a stazioni, file ordinate, giochi di squadra.
+
+    OPZIONI SPECIALI:
+    ${prefs.includeCognitive ? '- COGNITIVO: Integrare task COGNITIVI negli esercizi (es. luci di reazione, colori, calcolo, decision making).' : ''}
+    ${prefs.warmupType === 'Game' ? '- RISCALDAMENTO: Basato su GIOCHI di attivazione e interazione (ludico/situazionale), non corsa lineare.' : '- RISCALDAMENTO: Standard (corsa, mobilità dinamica).'}
 
     Vincoli Generali:
-    - DURATA SESSIONE: Ogni sessione deve avere una durata stimata tra i 60 e i 90 minuti.
+    - DURATA SESSIONE: 60-90 minuti.
     - Gli allenamenti devono essere svolti su un campo da ${prefs.sport} o pista d'atletica.
     - Attrezzatura minima: Solo racchetta, palline, coni, corda. Niente pesi pesanti.
     - Il linguaggio deve essere tecnico ma comprensibile, in ITALIANO.
-    - Includi esercizi specifici per il ${prefs.sport} (es. ${prefs.sport === 'Padel' ? 'vetri, bandeja' : 'spostamenti laterali, servizio'}).
   `;
 
   try {
