@@ -130,7 +130,7 @@ const getApiKeyOrThrow = () => {
 export const generateTrainingPlan = async (prefs: UserPreferences): Promise<WeeklyPlan> => {
   const apiKey = getApiKeyOrThrow();
   const genAI = new GoogleGenAI({ apiKey: apiKey });
-  const model = "gemini-2.5-flash";
+  const model = "gemini-3-flash-preview";
   
   const prompt = `
     Sei un preparatore atletico esperto specializzato nel ${prefs.sport} (e.g. FITP/PTR certified).
@@ -152,13 +152,14 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
       * Se Gruppo (5+): Gestione a stazioni, file ordinate, giochi di squadra.
 
     OPZIONI SPECIALI:
-    ${prefs.includeCognitive ? '- COGNITIVO: Integrare task COGNITIVI negli esercizi (es. luci di reazione, colori, calcolo, decision making).' : ''}
+    ${prefs.includeCognitive ? '- COGNITIVO: Integrare task COGNITIVI negli esercizi (es. colori, calcolo, decision making veloce).' : ''}
+    ${prefs.useBlazepod ? '- BLAZEPOD: Include specificamente esercizi con sistemi di luci di reazione (Blazepod). Descrivi come posizionare i pod sul campo e come reagire ai colori.' : ''}
     ${prefs.warmupType === 'Game' ? '- RISCALDAMENTO: Basato su GIOCHI di attivazione e interazione (ludico/situazionale), non corsa lineare.' : '- RISCALDAMENTO: Standard (corsa, mobilità dinamica).'}
 
     Vincoli Generali:
     - DURATA SESSIONE: 60-90 minuti.
     - Gli allenamenti devono essere svolti su un campo da ${prefs.sport} o pista d'atletica.
-    - Attrezzatura minima: Solo racchetta, palline, coni, corda. Niente pesi pesanti.
+    - Attrezzatura minima: Solo racchetta, palline, coni, corda. ${prefs.useBlazepod ? 'Include l\'uso di Blazepod.' : 'Niente pesi pesanti.'}
     - Il linguaggio deve essere tecnico ma comprensibile, in ITALIANO.
   `;
 
@@ -185,7 +186,7 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
 export const generateLessonPlan = async (prefs: LessonPreferences): Promise<LessonPlan> => {
   const apiKey = getApiKeyOrThrow();
   const genAI = new GoogleGenAI({ apiKey: apiKey });
-  const model = "gemini-2.5-flash";
+  const model = "gemini-3-flash-preview";
 
   const prompt = `
     Sei un Maestro di ${prefs.sport} (Coach) certificato.

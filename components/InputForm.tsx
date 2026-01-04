@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { FitnessLevel, SessionCount, TrainingFocus, UserPreferences, Sport, WarmupType, GroupSize } from '../types';
 import { Button } from './Button';
-import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2, Users } from 'lucide-react';
+import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2, Users, Radio } from 'lucide-react';
 
 interface InputFormProps {
   onSubmit: (prefs: UserPreferences) => void;
@@ -17,8 +17,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
   const [focus, setFocus] = useState<TrainingFocus>(TrainingFocus.MIXED);
   const [phase, setPhase] = useState<UserPreferences['phase']>('In-season');
   
-  // New State for Advanced Options
+  // Advanced Options
   const [includeCognitive, setIncludeCognitive] = useState(false);
+  const [useBlazepod, setUseBlazepod] = useState(false);
   const [warmupType, setWarmupType] = useState<WarmupType>('Standard');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -31,6 +32,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
       focus,
       phase,
       includeCognitive,
+      useBlazepod,
       warmupType
     });
   };
@@ -185,14 +187,14 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
 
         <div className="border-t border-gray-100 my-4"></div>
 
-        {/* Advanced Options: Cognitive & Warmup */}
+        {/* Advanced Options */}
         <div className="space-y-4">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Opzioni Avanzate</h3>
             
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Cognitive Toggle */}
                 <div 
-                  className={`flex-1 p-4 rounded-xl border-2 cursor-pointer transition-all ${includeCognitive ? 'border-purple-500 bg-purple-50' : 'border-gray-100 bg-gray-50 hover:border-gray-200'}`}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${includeCognitive ? 'border-purple-500 bg-purple-50' : 'border-gray-100 bg-gray-50 hover:border-gray-200'}`}
                   onClick={() => setIncludeCognitive(!includeCognitive)}
                 >
                     <div className="flex justify-between items-center mb-1">
@@ -202,8 +204,20 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
                     <p className="text-xs text-gray-500 leading-tight">Include esercizi di reazione, scelta e memoria.</p>
                 </div>
 
+                {/* Blazepod Toggle */}
+                <div 
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${useBlazepod ? 'border-cyan-500 bg-cyan-50' : 'border-gray-100 bg-gray-50 hover:border-gray-200'}`}
+                  onClick={() => setUseBlazepod(!useBlazepod)}
+                >
+                    <div className="flex justify-between items-center mb-1">
+                        <span className={`font-semibold text-sm ${useBlazepod ? 'text-cyan-700' : 'text-gray-600'}`}>Blazepod / Luci</span>
+                        <Radio size={20} className={useBlazepod ? 'text-cyan-600' : 'text-gray-400'} />
+                    </div>
+                    <p className="text-xs text-gray-500 leading-tight">Usa luci di reazione per velocità e riflessi.</p>
+                </div>
+
                 {/* Warmup Type */}
-                <div className="flex-1 space-y-2">
+                <div className="sm:col-span-2 space-y-2">
                     <label className="text-xs font-semibold text-gray-500 block">Tipo Riscaldamento</label>
                     <div className="flex gap-2">
                          <button

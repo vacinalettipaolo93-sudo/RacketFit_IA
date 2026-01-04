@@ -114,6 +114,7 @@ export interface UserPreferences {
   focus: TrainingFocus;
   phase: 'Pre-season' | 'In-season' | 'Off-season';
   includeCognitive: boolean;
+  useBlazepod: boolean;
   warmupType: WarmupType;
 }
 
@@ -143,7 +144,7 @@ export interface SavedLessonPlan extends LessonPlan {
 export interface PhysicalTest {
   id: string;
   name: string;
-  category: 'Agility' | 'Endurance' | 'Power' | 'Strength' | 'Coordination' | 'Flexibility';
+  category: 'Agility' | 'Endurance' | 'Power' | 'Strength' | 'Coordination' | 'Flexibility' | 'Reaction';
   description: string;
   equipment: string;
   procedure: string[];

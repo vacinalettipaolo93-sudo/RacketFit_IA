@@ -1,9 +1,39 @@
 
 import React, { useState } from 'react';
 import { PhysicalTest } from '../types';
-import { ChevronDown, ChevronUp, Timer, Ruler, Activity, Dumbbell, Eye, Move } from 'lucide-react';
+import { ChevronDown, ChevronUp, Timer, Ruler, Activity, Dumbbell, Eye, Move, Zap, Radio } from 'lucide-react';
 
 export const TESTS_DATA: PhysicalTest[] = [
+  {
+    id: 'blazepod-reaction-4',
+    name: 'Blazepod 4-Pod Static Reaction',
+    category: 'Reaction',
+    description: "Valuta la velocità di reazione pura e la visione periferica in uno spazio ristretto.",
+    equipment: "4 Blazepod, supporto piano o tavolo.",
+    procedure: [
+      "Posiziona 4 pod a quadrato (distanza 50cm tra loro).",
+      "L'atleta posiziona le mani al centro del quadrato.",
+      "Imposta l'app Blazepod su 'Random' con un timeout di 1 secondo.",
+      "Spegni 30 luci il più velocemente possibile.",
+      "Mantieni il focus visivo al centro, usando la visione periferica per individuare le luci."
+    ],
+    measurement: "Tempo di reazione medio (millisecondi)."
+  },
+  {
+    id: 'blazepod-lateral-shuttle',
+    name: 'Blazepod Lateral Shuttle (Agility)',
+    category: 'Reaction',
+    description: "Combina lo scatto laterale specifico del tennis/padel con lo stimolo visivo imprevedibile.",
+    equipment: "2 Blazepod, campo o spazio piano di 4 metri.",
+    procedure: [
+      "Posiziona 2 pod a 4 metri di distanza sulla linea laterale.",
+      "L'atleta parte al centro in posizione di attesa.",
+      "Imposta l'app per attivare un solo pod alla volta in modo casuale.",
+      "L'atleta deve scattare lateralmente, toccare il pod attivo e tornare subito al centro.",
+      "Durata: 45 secondi continui."
+    ],
+    measurement: "Numero totale di 'hits' (tocchi) in 45 secondi."
+  },
   {
     id: 'spider',
     name: 'Spider Run (Test a Ragno)',
@@ -18,6 +48,20 @@ export const TESTS_DATA: PhysicalTest[] = [
       "Il tempo si ferma quando l'ultima palla è posata sulla racchetta."
     ],
     measurement: "Tempo totale (in secondi). Un buon tempo per agonisti è sotto i 18-19 secondi."
+  },
+  {
+    id: 'blazepod-scanning-180',
+    name: 'Blazepod scanning 180°',
+    category: 'Reaction',
+    description: "Test di coordinazione e scansione visiva per giocatori di rete.",
+    equipment: "6 Blazepod, fissati a muro o su coni a semicerchio.",
+    procedure: [
+      "Disponi 6 pod a semicerchio (raggio 2m) davanti all'atleta.",
+      "Imposta 'All-in' o 'Random' con colori diversi (es. spegni solo il verde, ignora il rosso).",
+      "L'atleta deve scansionare l'area e toccare solo i pod del colore corretto.",
+      "Test di 30 secondi."
+    ],
+    measurement: "Percentuale di precisione e numero di tocchi corretti."
   },
   {
     id: 'hexagon',
@@ -174,9 +218,10 @@ export const TestsView: React.FC = () => {
 
   const getIcon = (category: string) => {
     switch(category) {
+      case 'Reaction': return <Radio size={20} className="text-cyan-500" />;
       case 'Agility': return <Activity size={20} className="text-blue-500" />;
       case 'Endurance': return <Timer size={20} className="text-red-500" />;
-      case 'Power': return <Activity size={20} className="text-orange-500" />;
+      case 'Power': return <Zap size={20} className="text-orange-500" />;
       case 'Strength': return <Dumbbell size={20} className="text-purple-500" />;
       case 'Coordination': return <Eye size={20} className="text-teal-500" />;
       case 'Flexibility': return <Move size={20} className="text-pink-500" />;
@@ -188,7 +233,7 @@ export const TestsView: React.FC = () => {
     <div className="max-w-3xl mx-auto animate-fade-in pb-12">
       <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 mb-8 text-center">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Libreria Test Fisici</h2>
-        <p className="text-gray-500">Valuta la tua condizione atletica con questi test standardizzati da campo.</p>
+        <p className="text-gray-500">Valuta la tua condizione atletica con questi test standardizzati da campo, inclusi i nuovi test Blazepod.</p>
       </div>
 
       <div className="space-y-4">
@@ -205,7 +250,9 @@ export const TestsView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-800 text-lg">{test.name}</h3>
-                  <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full uppercase tracking-wider">
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full uppercase tracking-wider ${
+                    test.category === 'Reaction' ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
                     {test.category}
                   </span>
                 </div>
@@ -245,6 +292,13 @@ export const TestsView: React.FC = () => {
                       <p className="text-xs text-amber-900">{test.measurement}</p>
                     </div>
                   </div>
+
+                  {test.category === 'Reaction' && (
+                    <div className="bg-cyan-50 border border-cyan-100 p-3 rounded-lg flex items-center gap-2">
+                       <Radio size={16} className="text-cyan-600" />
+                       <span className="text-xs text-cyan-800 font-medium">Test ottimizzato per sistemi di luci Blazepod.</span>
+                    </div>
+                  )}
 
                 </div>
               </div>

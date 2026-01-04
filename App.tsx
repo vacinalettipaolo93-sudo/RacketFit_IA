@@ -119,10 +119,10 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       if (err.message === 'API_KEY_MISSING') {
-        setError("Chiave API mancante. Configurala nelle impostazioni o verifica Vercel.");
+        setError("Chiave API mancante. Configurala nelle impostazioni.");
         setShowSettings(true); 
       } else {
-        setError("Si è verificato un errore durante la generazione. Verifica la chiave API.");
+        setError("Si è verificato un errore durante la generazione. Verifica la connessione.");
       }
     } finally {
       setIsLoading(false);
@@ -214,9 +214,10 @@ const App: React.FC = () => {
         sessionsPerWeek: '2' as any,
         focus: 'Misto (Generale)' as any,
         phase: 'In-season',
-        includeCognitive: false, // Default for older plans
-        warmupType: 'Standard', // Default for older plans
-        groupSize: GroupSize.ONE // Default for older plans
+        includeCognitive: false,
+        useBlazepod: false,
+        warmupType: 'Standard',
+        groupSize: GroupSize.ONE
     });
   };
 
@@ -342,16 +343,16 @@ const App: React.FC = () => {
                   <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
                     <CheckCircle size={20} className="text-green-600" />
                     <div>
-                      <p className="text-sm font-bold text-green-800">Chiave Vercel Rilevata</p>
-                      <p className="text-xs text-green-700">L'app sta usando VITE_API_KEY dal server.</p>
+                      <p className="text-sm font-bold text-green-800">Connessione Server Attiva</p>
+                      <p className="text-xs text-green-700">L'app sta usando la configurazione automatica.</p>
                     </div>
                   </div>
                 ) : (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
                      <AlertCircle size={20} className="text-amber-600" />
                      <div>
-                       <p className="text-sm font-bold text-amber-800">Nessuna chiave server</p>
-                       <p className="text-xs text-amber-700">Inserisci una chiave manuale qui sotto.</p>
+                       <p className="text-sm font-bold text-amber-800">Chiave manuale richiesta</p>
+                       <p className="text-xs text-amber-700">Inserisci una chiave Gemini API per procedere.</p>
                      </div>
                   </div>
                 )}
@@ -381,7 +382,7 @@ const App: React.FC = () => {
                     className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-tennis-green focus:border-transparent outline-none"
                   />
                   <p className="text-xs text-gray-500">
-                    La chiave verrà salvata nel browser. Ha precedenza su Vercel.
+                    La chiave verrà salvata nel browser e utilizzata per le richieste AI.
                   </p>
                   <Button fullWidth onClick={handleSaveApiKey} disabled={!apiKeyInput.trim()}>
                     Salva Chiave
@@ -391,7 +392,7 @@ const App: React.FC = () => {
             </div>
             
             <div className="bg-gray-50 p-4 rounded-xl text-xs text-gray-500 flex justify-between items-center">
-              <span>Versione App: 1.1.0</span>
+              <span>RacketFit AI v1.2.0</span>
               {envKeyDetected && <span className="text-green-600 font-semibold">Online</span>}
             </div>
           </div>
@@ -498,7 +499,7 @@ const App: React.FC = () => {
             <p>{error}</p>
             {error.includes("Chiave API") && (
               <Button variant="secondary" onClick={() => setShowSettings(true)} className="py-1 px-4 text-sm">
-                Inserisci Chiave
+                Configura Chiave
               </Button>
             )}
           </div>
@@ -516,7 +517,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Elaborazione...</h3>
             <p className="text-gray-500 text-center max-w-md">
-              Stiamo salvando o generando il tuo programma.
+              Il Coach AI sta elaborando il tuo programma personalizzato.
             </p>
           </div>
         )}
@@ -554,8 +555,8 @@ const App: React.FC = () => {
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-700">
                     <Activity />
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-2">Poca Attrezzatura</h3>
-                  <p className="text-sm text-gray-600">Allenati direttamente sul campo o su una pista con solo coni, corda e racchetta/pala.</p>
+                  <h3 className="font-bold text-gray-900 mb-2">High Tech</h3>
+                  <p className="text-sm text-gray-600">Include ora il supporto per Blazepod e task cognitivi per un training all'avanguardia.</p>
                 </div>
                 <div className="text-center p-4">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-700">
