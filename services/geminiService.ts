@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan } from "../types";
 
@@ -15,20 +14,21 @@ export const hasEnvApiKey = (): boolean => {
     // @ts-ignore
     if (import.meta.env && import.meta.env.VITE_API_KEY) return true;
   } catch (e) {}
-  
+
   try {
     if (process.env.API_KEY) return true;
   } catch (e) {}
-  
+
   return false;
 };
 
-// --- TRAINING PLAN SCHEMA ---
+// --- TRAINING PLAN SCHEMA (UPDATED: 50' netti, solo mainBlock, no warmup/cooldown) ---
 const trainingPlanSchema: Schema = {
   type: Type.OBJECT,
   properties: {
     weeklyGoal: { type: Type.STRING },
     advice: { type: Type.STRING },
+    location: { type: Type.STRING, description: "Campo oppure Fuori" },
     sessions: {
       type: Type.ARRAY,
       items: {
@@ -36,8 +36,8 @@ const trainingPlanSchema: Schema = {
         properties: {
           dayName: { type: Type.STRING },
           focusArea: { type: Type.STRING },
-          totalDuration: { type: Type.STRING },
-          warmup: { type: Type.ARRAY, items: { type: Type.STRING } },
+          totalDuration: { type: Type.STRING, description: "Must be exactly '50 min'" },
+          location: { type: Type.STRING, description: "Campo oppure Fuori" },
           mainBlock: {
             type: Type.ARRAY,
             items: {
@@ -47,21 +47,22 @@ const trainingPlanSchema: Schema = {
                 description: { type: Type.STRING },
                 durationOrReps: { type: Type.STRING },
                 rest: { type: Type.STRING },
-                notes: { type: Type.STRING }
+                notes: { type: Type.STRING },
+                pairWork: { type: Type.BOOLEAN, description: "True if partner-based drill" },
+                location: { type: Type.STRING, description: "Campo oppure Fuori" }
               },
               required: ["name", "description", "durationOrReps", "rest"]
             }
-          },
-          cooldown: { type: Type.ARRAY, items: { type: Type.STRING } }
+          }
         },
-        required: ["dayName", "focusArea", "totalDuration", "warmup", "mainBlock", "cooldown"]
+        required: ["dayName", "focusArea", "totalDuration", "location", "mainBlock"]
       }
     }
   },
-  required: ["weeklyGoal", "sessions", "advice"]
+  required: ["weeklyGoal", "sessions", "advice", "location"]
 };
 
-// --- LESSON PLAN SCHEMA ---
+// --- LESSON PLAN SCHEMA (UNCHANGED) ---
 const lessonPlanSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -70,8 +71,8 @@ const lessonPlanSchema: Schema = {
     mode: { type: Type.STRING },
     level: { type: Type.STRING },
     duration: { type: Type.STRING },
-    warmup: { 
-      type: Type.ARRAY, 
+    warmup: {
+      type: Type.ARRAY,
       items: { type: Type.STRING },
       description: "Technical warmup exercises (minitennis, palleggio controllato)"
     },
@@ -131,52 +132,76 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
   const apiKey = getApiKeyOrThrow();
   const genAI = new GoogleGenAI({ apiKey: apiKey });
   const model = "gemini-3-flash-preview";
-  
+
   const prompt = `
-    Sei un preparatore atletico esperto specializzato nel ${prefs.sport} (e.g. FITP/PTR certified).
-    Crea un programma di allenamento settimanale per un giocatore di livello ${prefs.level} di ${prefs.sport}.
-    
-    Dettagli Atleta:
-    - Sport: ${prefs.sport}
-    - Livello: ${prefs.level}
-    - Fase della stagione: ${prefs.phase}
-    - Obiettivo Settimanale: ${prefs.focus}
-    - Numero di sessioni: ${prefs.sessionsPerWeek}
-    
-    CONFIGURAZIONE GRUPPO:
-    - Numero Partecipanti: ${prefs.groupSize}
-    - ORGANIZZAZIONE: Gli esercizi DEVONO essere ottimizzati per questo numero di persone.
-      * Se 1 Persona: Focus individuale, tecnica analitica.
-      * Se 2 Persone: Usa lavori a specchio, staffette a coppie, competizione diretta, lancio palla reciproco.
-      * Se 3-4 Persone: Piccoli circuiti, staffette, gestione spazi.
-      * Se Gruppo (5+): Gestione a stazioni, file ordinate, giochi di squadra.
+Sei un preparatore atletico esperto specializzato nel ${prefs.sport}.
 
-    OPZIONI SPECIALI:
-    ${prefs.includeCognitive ? '- COGNITIVO: Integrare task COGNITIVI negli esercizi (es. colori, calcolo, decision making veloce).' : ''}
-    ${prefs.useBlazepod ? '- BLAZEPOD: Include specificamente esercizi con sistemi di luci di reazione (Blazepod). Descrivi come posizionare i pod sul campo e come reagire ai colori.' : ''}
-    ${prefs.warmupType === 'Game' ? '- RISCALDAMENTO: Basato su GIOCHI di attivazione e interazione (ludico/situazionale), non corsa lineare.' : '- RISCALDAMENTO: Standard (corsa, mobilità dinamica).'}
+OBIETTIVO:
+Crea un programma settimanale di ATLETICA PROPEDEUTICA SPECIFICA per ${prefs.sport}.
+Deve essere orientato al tennis/padel (footwork, rapidità, cambi direzione, capacità di frenata, accelerazioni, reattività, coordinazione, prevenzione).
 
-    Vincoli Generali:
-    - DURATA SESSIONE: 60-90 minuti.
-    - Gli allenamenti devono essere svolti su un campo da ${prefs.sport} o pista d'atletica.
-    - Attrezzatura minima: Solo racchetta, palline, coni, corda. ${prefs.useBlazepod ? 'Include l\'uso di Blazepod.' : 'Niente pesi pesanti.'}
-    - Il linguaggio deve essere tecnico ma comprensibile, in ITALIANO.
-  `;
+SCELTE UTENTE:
+- Sport: ${prefs.sport}
+- Livello: ${prefs.level}
+- Fase stagione: ${prefs.phase}
+- Focus settimanale: ${prefs.focus}
+- Sessioni: ${prefs.sessionsPerWeek}
+- Numero partecipanti: ${prefs.groupSize}
+- LOCATION: ${prefs.location} (Campo oppure Fuori)
+
+VINCOLI OBBLIGATORI PER OGNI SESSIONE:
+- DURATA: ESATTAMENTE 50 minuti di lavoro NETTI (scrivi "50 min" in totalDuration).
+- NON inserire riscaldamento.
+- NON inserire defaticamento.
+- NON inserire partite finali / set / tie-break.
+- NON inserire esercizi "al cesto" (nessun feeding continuo del coach).
+- Gli esercizi devono essere eseguibili quasi sempre tra di loro (partner drill): imposta pairWork=true nella maggior parte dei drill.
+- Usa solo attrezzi semplici: coni, cinesini, corda, elastici leggeri, palline (solo per coordinazione, NON per cesto), scaletta se vuoi.
+- La descrizione deve essere in ITALIANO, tecnica ma semplice.
+
+REGOLE ORGANIZZAZIONE IN BASE AL GRUPPO:
+- 1 Persona: lavori individuali con vincoli chiari (tempi, distanze, target).
+- 2 Persone: lavori a coppie (specchio, inseguimento controllato, chiamate, staffette a coppie).
+- 3-4 Persone: rotazioni rapide, mini-stazioni, file corte.
+- 5+: lavoro a stazioni.
+
+LOCATION:
+- Se LOCATION = "Campo": usa linee del campo, corridoi, diagonali, rete come riferimento.
+- Se LOCATION = "Fuori": usa spazio piano (palestra, pista, parcheggio) e riferimenti con coni.
+
+OUTPUT:
+Rispondi SOLO con JSON valido secondo lo schema.
+`;
 
   try {
     const response = await genAI.models.generateContent({
-      model: model,
+      model,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: trainingPlanSchema,
-        systemInstruction: "Sei un coach d'élite. Rispondi con un JSON valido."
+        systemInstruction:
+          "Sei un coach d'élite. Rispondi con un JSON valido. Rispetta TUTTI i vincoli (50 min, no warmup, no cooldown, no final game, no cesto)."
       }
     });
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
-    return JSON.parse(text) as WeeklyPlan;
+    const data = JSON.parse(text) as WeeklyPlan;
+
+    // Hard-guard: for safety enforce location + 50 min on client side too
+    data.location = prefs.location;
+    data.sessions = (data.sessions || []).map((s) => ({
+      ...s,
+      totalDuration: '50 min',
+      location: prefs.location,
+      mainBlock: (s.mainBlock || []).map((d) => ({
+        ...d,
+        location: prefs.location
+      }))
+    }));
+
+    return data;
   } catch (error) {
     console.error("Error generating plan:", error);
     throw error;
@@ -223,14 +248,14 @@ export const generateLessonPlan = async (prefs: LessonPreferences): Promise<Less
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
-    
+
     const data = JSON.parse(text) as LessonPlan;
     // Inject user selections back into the object for consistency
     data.sport = prefs.sport;
     data.mode = prefs.mode;
     data.level = prefs.level;
     data.duration = prefs.duration;
-    
+
     return data;
   } catch (error) {
     console.error("Error generating lesson:", error);
