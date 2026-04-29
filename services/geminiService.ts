@@ -45,7 +45,11 @@ const trainingPlanSchema: Schema = {
               properties: {
                 name: { type: Type.STRING },
                 description: { type: Type.STRING },
-                durationOrReps: { type: Type.STRING },
+                durationOrReps: {
+                  type: Type.STRING,
+                  description:
+                    "Use ONLY the format 'N serie x N ripetizioni x Ns' OR 'N serie x N ripetizioni x Nm' (metri). Do NOT use minutes like '10 min'."
+                },
                 rest: { type: Type.STRING },
                 notes: { type: Type.STRING },
                 pairWork: { type: Type.BOOLEAN, description: "True if partner-based drill" },
@@ -157,7 +161,18 @@ VINCOLI OBBLIGATORI PER OGNI SESSIONE:
 - NON inserire esercizi "al cesto" (nessun feeding continuo del coach).
 - Gli esercizi devono essere eseguibili quasi sempre tra di loro (partner drill): imposta pairWork=true nella maggior parte dei drill.
 - Usa solo attrezzi semplici: coni, cinesini, corda, elastici leggeri, palline (solo per coordinazione, NON per cesto), scaletta se vuoi.
-- La descrizione deve essere in ITALIANO, tecnica ma semplice.
+- Lingua: ITALIANO, tecnico ma semplice.
+
+VINCOLO FORMATO DURATA ESERCIZI (IMPORTANTISSIMO):
+- In "durationOrReps" NON devi mai scrivere minuti tipo: "10 min", "8 minuti", "5'".
+- "durationOrReps" deve essere SEMPRE nel formato:
+  * "N serie x N ripetizioni x Ns" (secondi)  OPPURE
+  * "N serie x N ripetizioni x Nm" (metri)
+  Esempi corretti:
+  - "3 serie x 6 ripetizioni x 45s"
+  - "4 serie x 8 ripetizioni x 20m"
+  - "3 serie x 5 ripetizioni x 10m"
+- Se serve un lavoro “continuo”, spezzalo in ripetizioni (es. 6 ripetizioni x 30s) e non in minuti.
 
 REGOLE ORGANIZZAZIONE IN BASE AL GRUPPO:
 - 1 Persona: lavori individuali con vincoli chiari (tempi, distanze, target).
@@ -181,15 +196,16 @@ Rispondi SOLO con JSON valido secondo lo schema.
         responseMimeType: "application/json",
         responseSchema: trainingPlanSchema,
         systemInstruction:
-          "Sei un coach d'élite. Rispondi con un JSON valido. Rispetta TUTTI i vincoli (50 min, no warmup, no cooldown, no final game, no cesto)."
+          "Sei un coach d'élite. Rispondi con un JSON valido. Rispetta TUTTI i vincoli (50 min, no warmup, no cooldown, no final game, no cesto). durationOrReps DEVE essere sempre nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'."
       }
     });
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
+
     const data = JSON.parse(text) as WeeklyPlan;
 
-    // Hard-guard: for safety enforce location + 50 min on client side too
+    // Client-side hard guards for consistency
     data.location = prefs.location;
     data.sessions = (data.sessions || []).map((s) => ({
       ...s,
