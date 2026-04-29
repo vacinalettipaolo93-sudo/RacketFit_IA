@@ -1,4 +1,3 @@
-
 export enum Sport {
   TENNIS = 'Tennis',
   PADEL = 'Padel'
@@ -69,27 +68,41 @@ export const PADEL_LESSON_FOCUS = [
   'Tattica di Coppia'
 ];
 
+export type SessionLocation = 'Campo' | 'Fuori';
+
 export interface Drill {
   name: string;
   description: string;
   durationOrReps: string;
   rest: string;
   notes?: string;
+
+  // NEW: per atletica propedeutica
+  pairWork?: boolean; // quasi sempre true
+  location?: SessionLocation; // Campo / Fuori
 }
 
 export interface TrainingSession {
   dayName: string;
   focusArea: string;
-  totalDuration: string;
-  warmup: string[];
+
+  // NEW: sempre 50' netti
+  totalDuration: '50 min';
+
+  // NEW: solo lavoro, niente warmup/cooldown
   mainBlock: Drill[];
-  cooldown: string[];
+
+  // NEW: dove si svolge la sessione
+  location: SessionLocation;
 }
 
 export interface WeeklyPlan {
   weeklyGoal: string;
   sessions: TrainingSession[];
   advice: string;
+
+  // NEW: scelta utente, applicata a tutte le sessioni (o come default)
+  location: SessionLocation;
 }
 
 export interface LessonPlan {
@@ -106,6 +119,8 @@ export interface LessonPlan {
 
 export type WarmupType = 'Standard' | 'Game';
 
+// NEW: WarmupType rimane per compatibilità, ma nel prompt “Programmi” non lo useremo più.
+// Aggiungo location alla preferenza.
 export interface UserPreferences {
   sport: Sport;
   groupSize: GroupSize;
@@ -116,6 +131,9 @@ export interface UserPreferences {
   includeCognitive: boolean;
   useBlazepod: boolean;
   warmupType: WarmupType;
+
+  // NEW
+  location: SessionLocation;
 }
 
 export interface LessonPreferences {
