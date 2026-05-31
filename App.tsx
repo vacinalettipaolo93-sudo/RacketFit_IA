@@ -215,9 +215,10 @@ const App: React.FC = () => {
         focus: 'Misto (Generale)' as any,
         equipmentMode: savedPlan.equipmentMode ?? EquipmentMode.BODYWEIGHT_MINIMAL,
         phase: 'In-season',
+        includeWarmup: false,
         includeCognitive: false,
         useBlazepod: false,
-        warmupType: 'Standard',
+        warmupType: 'Normale',
         groupSize: GroupSize.ONE,
         location: savedPlan.location ?? 'Campo'
     });

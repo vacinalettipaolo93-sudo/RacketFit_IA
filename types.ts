@@ -75,6 +75,7 @@ export const PADEL_LESSON_FOCUS = [
 ];
 
 export type SessionLocation = 'Campo' | 'Fuori';
+export type MainSessionDuration = '50 min' | '55 min';
 
 export interface Drill {
   name: string;
@@ -95,14 +96,25 @@ export interface Drill {
   totalDurationEstimate?: string;
 }
 
+export interface WarmupBlock {
+  duration: '10 min';
+  type: WarmupType;
+  title: string;
+  description: string;
+  isExtra: true;
+}
+
 export interface TrainingSession {
   dayName: string;
   focusArea: string;
 
-  // NEW: sempre 50' netti
-  totalDuration: '50 min';
+  // Main block: 50 o 55 minuti netti (senza warm-up extra)
+  totalDuration: MainSessionDuration;
 
-  // NEW: solo lavoro, niente warmup/cooldown
+  // Riscaldamento extra opzionale (sempre 10 min)
+  warmup?: WarmupBlock;
+
+  // Blocco principale di lavoro
   mainBlock: Drill[];
 
   // NEW: dove si svolge la sessione
@@ -131,10 +143,9 @@ export interface LessonPlan {
   finalGame: string; // Points or game logic
 }
 
-export type WarmupType = 'Standard' | 'Game';
+export type WarmupType = 'Normale' | 'Gioco';
 
-// NEW: WarmupType rimane per compatibilità, ma nel prompt “Programmi” non lo useremo più.
-// Aggiungo location alla preferenza.
+// Preferenze utente per generazione programmi atletici.
 export interface UserPreferences {
   sport: Sport;
   groupSize: GroupSize;
@@ -143,11 +154,11 @@ export interface UserPreferences {
   focus: TrainingFocus;
   equipmentMode: EquipmentMode;
   phase: 'Pre-season' | 'In-season' | 'Off-season';
+  includeWarmup: boolean;
   includeCognitive: boolean;
   useBlazepod: boolean;
   warmupType: WarmupType;
 
-  // NEW
   location: SessionLocation;
 }
 

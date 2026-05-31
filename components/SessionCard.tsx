@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TrainingSession } from '../types';
-import { ChevronDown, ChevronUp, Clock, Activity, MapPin, Users, Dumbbell, Settings } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Activity, MapPin, Users, Dumbbell, Settings, Flame, Gamepad2 } from 'lucide-react';
 
 interface SessionCardProps {
   session: TrainingSession;
@@ -9,6 +9,11 @@ interface SessionCardProps {
 
 export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const mainMinutes = session.totalDuration === '55 min' ? 55 : 50;
+  const totalMinutes = session.warmup ? mainMinutes + 10 : mainMinutes;
+  const totalBreakdown = session.warmup
+    ? `${session.warmup.duration} extra + ${session.totalDuration} principale`
+    : `${session.totalDuration} principale`;
 
   return (
     <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden mb-6">
@@ -34,7 +39,16 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
             <MapPin size={14} /> {session.location}
           </span>
           <span className="text-sm text-gray-500 flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
-            <Clock size={14} /> {session.totalDuration}
+            <Clock size={14} /> Lavoro principale: {session.totalDuration}
+          </span>
+          {session.warmup && (
+            <span className="text-sm text-orange-700 flex items-center gap-1 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
+              {session.warmup.type === 'Gioco' ? <Gamepad2 size={14} /> : <Flame size={14} />}
+              Warm-up extra: {session.warmup.duration}
+            </span>
+          )}
+          <span className="text-xs text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
+            Totale seduta: ~{totalMinutes} min ({totalBreakdown})
           </span>
           <button className="text-gray-400 hover:text-tennis-dark">
             {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
@@ -45,9 +59,19 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
       {/* Content */}
       {isOpen && (
         <div className="p-5 space-y-6">
+          {session.warmup && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <h4 className="text-sm uppercase tracking-wider text-orange-700 font-bold mb-2 flex items-center gap-2">
+                {session.warmup.type === 'Gioco' ? <Gamepad2 size={14} /> : <Flame size={14} />}
+                Riscaldamento extra ({session.warmup.duration}) — {session.warmup.type}
+              </h4>
+              <p className="text-sm text-orange-900">{session.warmup.description}</p>
+            </div>
+          )}
+
           <div>
             <h4 className="text-sm uppercase tracking-wider text-gray-400 font-bold mb-3">
-              Lavoro (50' netti) — NO riscaldamento / NO defaticamento
+              Blocco principale ({session.totalDuration}) — separato dal riscaldamento extra
             </h4>
 
             <div className="space-y-4">
