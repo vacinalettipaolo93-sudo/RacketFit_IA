@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { generateTrainingPlan, generateLessonPlan, getStoredApiKey, saveApiKey, removeApiKey, hasEnvApiKey } from './services/geminiService';
-import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan, SavedLessonPlan, GroupSize } from './types';
+import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan, SavedLessonPlan, GroupSize, EquipmentMode } from './types';
 import { InputForm } from './components/InputForm';
 import { PlanDisplay } from './components/PlanDisplay';
 import { TestsView } from './components/TestsView';
@@ -213,11 +213,13 @@ const App: React.FC = () => {
         level: savedPlan.level as any,
         sessionsPerWeek: '2' as any,
         focus: 'Misto (Generale)' as any,
+        equipmentMode: savedPlan.equipmentMode ?? EquipmentMode.BODYWEIGHT_MINIMAL,
         phase: 'In-season',
         includeCognitive: false,
         useBlazepod: false,
         warmupType: 'Standard',
-        groupSize: GroupSize.ONE
+        groupSize: GroupSize.ONE,
+        location: savedPlan.location ?? 'Campo'
     });
   };
 

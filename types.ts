@@ -35,6 +35,11 @@ export enum TrainingFocus {
   MIXED = 'Misto (Generale)'
 }
 
+export enum EquipmentMode {
+  BODYWEIGHT_MINIMAL = 'Corpo libero / attrezzatura minima',
+  RACKET_SPECIFIC = 'Solo strumenti specifici sport di racchetta'
+}
+
 // New Types for Coach Mode
 export enum LessonMode {
   INDIVIDUAL = 'Individuale (1 giocatore)',
@@ -103,6 +108,7 @@ export interface WeeklyPlan {
 
   // NEW: scelta utente, applicata a tutte le sessioni (o come default)
   location: SessionLocation;
+  equipmentMode?: EquipmentMode;
 }
 
 export interface LessonPlan {
@@ -127,6 +133,7 @@ export interface UserPreferences {
   level: FitnessLevel;
   sessionsPerWeek: SessionCount;
   focus: TrainingFocus;
+  equipmentMode: EquipmentMode;
   phase: 'Pre-season' | 'In-season' | 'Off-season';
   includeCognitive: boolean;
   useBlazepod: boolean;
