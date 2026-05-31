@@ -105,6 +105,11 @@ export interface WarmupBlock {
   type: WarmupType;
   title: string;
   description: string;
+  setup: string;
+  execution: string;
+  rotation: string;
+  timePlan: string;
+  equipment?: string;
   isExtra: true;
 }
 
