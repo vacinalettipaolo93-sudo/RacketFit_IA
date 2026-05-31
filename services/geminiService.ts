@@ -54,7 +54,19 @@ const trainingPlanSchema: Schema = {
                 rest: { type: Type.STRING },
                 notes: { type: Type.STRING },
                 pairWork: { type: Type.BOOLEAN, description: "True if partner-based drill" },
-                location: { type: Type.STRING, description: "Campo oppure Fuori" }
+                location: { type: Type.STRING, description: "Campo oppure Fuori" },
+                equipment: {
+                  type: Type.STRING,
+                  description: "Attrezzo utilizzato (es: 'Palla medica 3kg', 'Elastico resistenza media', 'Step', 'Bastone', 'Cinesini'). Lascia vuoto se corpo libero."
+                },
+                setup: {
+                  type: Type.STRING,
+                  description: "Istruzioni pratiche di setup: posizione cinesini/coni (distanze), dove mettere step/elastico/palla medica/bastone, punto di partenza, organizzazione rotazione atleti."
+                },
+                totalDurationEstimate: {
+                  type: Type.STRING,
+                  description: "Durata totale stimata dell'esercizio incluso recupero tra le serie (es: '~5 min', '~7 min'). Calcola in secondi: (serie × rip × tempo_rep_sec) + (serie × recupero_sec), poi converti in minuti."
+                }
               },
               required: ["name", "description", "durationOrReps", "rest"]
             }
@@ -117,6 +129,19 @@ const lessonPlanSchema: Schema = {
 };
 
 const getEquipmentRules = (prefs: UserPreferences): string => {
+  if (prefs.equipmentMode === EquipmentMode.WITH_EQUIPMENT) {
+    return `
+VINCOLI ATTREZZATURA (OBBLIGATORI):
+- MODALITÀ: Con attrezzi da preparazione atletica.
+- ATTREZZI CONSENTITI E OBBLIGATORI: elastici (di resistenza), palle mediche, bastoni, step.
+- REGOLA FONDAMENTALE: almeno il 70% degli esercizi DEVE utilizzare fisicamente uno o più tra: elastico, palla medica, bastone, step.
+- Per ogni esercizio che usa un attrezzo, inserisci il nome dell'attrezzo nel campo "equipment" (es: "Elastico resistenza media", "Palla medica 3kg", "Step", "Bastone").
+- Cinesini/coni sono SEMPRE consentiti come riferimento spaziale.
+- NON CONSENTITO: palle da tennis/padel, racchette, pale, macchine, bilancieri pesanti, manubri, corde per salto.
+- Ogni esercizio DEVE avere un campo "setup" con istruzioni pratiche: dove posizionare i cinesini, dove mettere l'attrezzo, punto di partenza, distanze.
+`;
+  }
+
   if (prefs.equipmentMode === EquipmentMode.RACKET_SPECIFIC) {
     return `
 VINCOLI ATTREZZATURA (OBBLIGATORI):
@@ -124,6 +149,7 @@ VINCOLI ATTREZZATURA (OBBLIGATORI):
 - CONSENTITO: palle/palline da tennis-padel-pickleball, racchette/pale, attrezzatura specifica di tennis/padel/pickleball, ostacoli.
 - NON CONSENTITO: elastici, palle mediche, manubri, bilancieri, kettlebell, macchine, corde, scalette o altri strumenti non nella lista consentita.
 - Ogni drill deve essere realizzabile SOLO con gli strumenti consentiti.
+- Ogni esercizio DEVE avere un campo "setup" con istruzioni pratiche: dove posizionare cinesini/ostacoli, punto di partenza, distanze.
 `;
   }
 
@@ -133,6 +159,7 @@ VINCOLI ATTREZZATURA (OBBLIGATORI):
 - CONSENTITO: solo corpo libero + cinesini/coni (eventuali linee del campo come riferimento).
 - NON CONSENTITO: elastici, palle mediche, palle, racchette/pale, ostacoli, scalette, corde e qualsiasi altra attrezzatura aggiuntiva.
 - Ogni drill deve essere realizzabile SOLO con gli strumenti consentiti.
+- Ogni esercizio DEVE avere un campo "setup" con istruzioni pratiche: dove posizionare i cinesini, punto di partenza, distanze.
 `;
 };
 
@@ -197,11 +224,32 @@ VINCOLO FORMATO DURATA ESERCIZI (IMPORTANTISSIMO):
   - "3 serie x 5 ripetizioni x 10m"
 - Se serve un lavoro “continuo”, spezzalo in ripetizioni (es. 6 ripetizioni x 30s) e non in minuti.
 
+CAMPO "totalDurationEstimate" (OBBLIGATORIO per ogni esercizio):
+- Calcola e riporta la durata totale stimata dell'esercizio incluso il recupero tra le serie.
+- Formula: (N_serie × N_rip × tempo_per_rep_in_sec) + (N_serie × recupero_in_sec) = totale in secondi → converti in minuti.
+- Esempio: 3 serie x 6 rep x 15s + recupero 45s = (3×6×15) + (3×45) = 270+135 = 405s ≈ "~7 min"
+- Arrotonda al minuto più vicino, usa il formato "~N min".
+
+CAMPO "setup" (OBBLIGATORIO per ogni esercizio):
+- Descrivi come preparare praticamente l'esercizio sul campo.
+- Includi SEMPRE:
+  * Numero e disposizione dei cinesini/coni (es: "4 cinesini in linea a 1.5m di distanza l'uno dall'altro")
+  * Punto di partenza dell'atleta (es: "Atleta in piedi dietro il primo cinesino")
+  * Posizione dell'attrezzo se presente (es: "Step posizionato al termine della linea", "Elastico ancorato al palo di rete all'altezza dei fianchi")
+  * Organizzazione della rotazione se il gruppo è numeroso (es: "File di 2-3 atleti, si riparte appena il primo ha finito")
+- Usa frasi brevi e pratiche, leggibili da un coach sul campo.
+
 REGOLE ORGANIZZAZIONE IN BASE AL GRUPPO:
 - 1 Persona: lavori individuali con vincoli chiari (tempi, distanze, target).
 - 2 Persone: lavori a coppie (specchio, inseguimento controllato, chiamate, staffette a coppie).
 - 3-4 Persone: rotazioni rapide, mini-stazioni, file corte.
-- 5+: lavoro a stazioni.
+- 5+: lavoro a stazioni in circuito.
+
+CIRCUITO A STAZIONI (se groupSize è "3 Persone", "4 Persone" o "Gruppo (5+)"):
+- Progetta gli esercizi come stazioni di un circuito a rotazione.
+- FONDAMENTALE: ogni stazione deve avere una durata di lavoro effettivo SIMILE (obiettivo: 45-60 secondi per passaggio, tolleranza ±10 secondi).
+- Normalizza il volume (serie, rip, tempi) di ogni esercizio in modo che totalDurationEstimate risulti omogeneo tra tutte le stazioni.
+- In "notes" di ogni esercizio/stazione aggiungi: "Stazione circuito: ~Xs lavoro per passaggio" (es: "Stazione circuito: ~50s lavoro per passaggio").
 
 LOCATION:
 - Se LOCATION = "Campo": usa linee del campo, corridoi, diagonali, rete come riferimento.
@@ -219,7 +267,7 @@ Rispondi SOLO con JSON valido secondo lo schema.
         responseMimeType: "application/json",
         responseSchema: trainingPlanSchema,
         systemInstruction:
-          "Sei un coach d'élite. Rispondi con un JSON valido. Rispetta TUTTI i vincoli (50 min, no warmup, no cooldown, no final game, no cesto). durationOrReps DEVE essere sempre nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'."
+          "Sei un coach d'élite. Rispondi con un JSON valido. Rispetta TUTTI i vincoli (50 min, no warmup, no cooldown, no final game, no cesto). durationOrReps DEVE essere sempre nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere 'setup' (istruzioni pratiche con cinesini/attrezzi) e 'totalDurationEstimate' (~N min). Se la modalità è 'Con attrezzi', almeno il 70% degli esercizi deve usare elastici, palle mediche, bastoni o step nel campo 'equipment'."
       }
     });
 

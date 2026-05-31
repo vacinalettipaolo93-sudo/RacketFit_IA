@@ -37,6 +37,7 @@ export enum TrainingFocus {
 
 export enum EquipmentMode {
   BODYWEIGHT_MINIMAL = 'Corpo libero / attrezzatura minima',
+  WITH_EQUIPMENT = 'Con attrezzi (elastici, palle mediche, bastoni, step)',
   RACKET_SPECIFIC = 'Solo strumenti specifici sport di racchetta'
 }
 
@@ -85,6 +86,13 @@ export interface Drill {
   // NEW: per atletica propedeutica
   pairWork?: boolean; // quasi sempre true
   location?: SessionLocation; // Campo / Fuori
+
+  // NEW: attrezzo usato nell'esercizio (es: "Palla medica 3kg", "Elastico resistenza media")
+  equipment?: string;
+  // NEW: istruzioni di setup pratico (posizione cinesini, attrezzi, punto di partenza, distanze)
+  setup?: string;
+  // NEW: durata totale stimata dell'esercizio incluso recupero (es: "~5 min", "~7 min")
+  totalDurationEstimate?: string;
 }
 
 export interface TrainingSession {

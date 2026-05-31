@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TrainingSession } from '../types';
-import { ChevronDown, ChevronUp, Clock, Activity, MapPin, Users } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Activity, MapPin, Users, Dumbbell, Settings } from 'lucide-react';
 
 interface SessionCardProps {
   session: TrainingSession;
@@ -56,6 +56,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
                   key={i}
                   className="border border-gray-100 rounded-xl p-4 hover:border-tennis-green/50 transition-colors bg-gray-50/50"
                 >
+                  {/* Exercise header */}
                   <div className="flex justify-between items-start mb-2 gap-3">
                     <h5 className="font-bold text-gray-900 text-lg">{drill.name}</h5>
                     <span className="text-xs font-mono bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 whitespace-nowrap">
@@ -63,12 +64,37 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
                     </span>
                   </div>
 
+                  {/* Equipment badge */}
+                  {drill.equipment && (
+                    <div className="mb-2">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-1 rounded">
+                        <Dumbbell size={11} /> {drill.equipment}
+                      </span>
+                    </div>
+                  )}
+
                   <p className="text-gray-600 text-sm mb-3 leading-relaxed">{drill.description}</p>
+
+                  {/* Setup instructions */}
+                  {drill.setup && (
+                    <div className="mb-3 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-blue-700 flex items-center gap-1 mb-1">
+                        <Settings size={11} /> Setup pratico
+                      </p>
+                      <p className="text-xs text-blue-800 leading-relaxed">{drill.setup}</p>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2 mt-2">
                     <span className="text-xs font-semibold text-tennis-accent bg-teal-50 px-2 py-1 rounded">
                       Recupero: {drill.rest}
                     </span>
+
+                    {drill.totalDurationEstimate && (
+                      <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded inline-flex items-center gap-1">
+                        <Clock size={11} /> Tot: {drill.totalDurationEstimate}
+                      </span>
+                    )}
 
                     {drill.pairWork && (
                       <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded inline-flex items-center gap-1">
