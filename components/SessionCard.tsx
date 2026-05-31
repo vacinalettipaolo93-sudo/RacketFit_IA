@@ -9,6 +9,11 @@ interface SessionCardProps {
 
 export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const mainMinutes = session.totalDuration === '55 min' ? 55 : 50;
+  const totalMinutes = session.warmup ? mainMinutes + 10 : mainMinutes;
+  const totalBreakdown = session.warmup
+    ? `${session.warmup.duration} extra + ${session.totalDuration} principale`
+    : `${session.totalDuration} principale`;
 
   return (
     <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden mb-6">
@@ -43,7 +48,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
             </span>
           )}
           <span className="text-xs text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-            Totale seduta: {session.warmup ? `${session.warmup.duration} extra + ${session.totalDuration} principale` : `${session.totalDuration} principale`}
+            Totale seduta: ~{totalMinutes} min ({totalBreakdown})
           </span>
           <button className="text-gray-400 hover:text-tennis-dark">
             {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}

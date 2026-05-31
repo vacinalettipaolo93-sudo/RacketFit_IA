@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan, EquipmentMode } from "../types";
+import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan, EquipmentMode, Drill } from "../types";
 
 // Helper functions for manual API Key management
 const STORAGE_KEY = 'gemini_api_key';
@@ -174,6 +174,9 @@ VINCOLI ATTREZZATURA (OBBLIGATORI):
 };
 
 const normalizeMainDuration = (value?: string): '50 min' | '55 min' => {
+  if (value && value !== '50 min' && value !== '55 min') {
+    console.warn(`Unexpected totalDuration "${value}", fallback a "50 min".`);
+  }
   return value === '55 min' ? '55 min' : '50 min';
 };
 
@@ -198,18 +201,24 @@ const addUniqueNote = (notes: string | undefined, addition: string): string => {
   return `${notes} ${addition}`;
 };
 
+const appendIfMissing = (value: string | undefined, addition: string, probe: string): string => {
+  if (!value) return addition;
+  if (value.toLowerCase().includes(probe.toLowerCase())) return value;
+  return `${value} ${addition}`;
+};
+
 const includesAnyKeyword = (value: string | undefined, keywords: string[]): boolean => {
   if (!value) return false;
   const normalized = value.toLowerCase();
   return keywords.some((k) => normalized.includes(k));
 };
 
-const isCognitiveDrill = (drill: any): boolean => {
+const isCognitiveDrill = (drill: Drill): boolean => {
   const cognitiveKeywords = ['cognitiv', 'decision', 'reatt', 'stimolo', 'visiv', 'colore', 'segnale', 'chiamata'];
   return [drill.name, drill.description, drill.notes, drill.setup].some((field) => includesAnyKeyword(field, cognitiveKeywords));
 };
 
-const isBlazepodDrill = (drill: any): boolean => {
+const isBlazepodDrill = (drill: Drill): boolean => {
   const blazepodKeywords = ['blazepod', 'blaze pod', 'luci', 'pod'];
   return [drill.name, drill.description, drill.notes, drill.setup, drill.equipment].some((field) => includesAnyKeyword(field, blazepodKeywords));
 };
@@ -218,13 +227,17 @@ const ensureCognitiveAndBlazepodCoverage = (data: WeeklyPlan, prefs: UserPrefere
   const sessions = data.sessions || [];
   if (!sessions.length) return;
 
-  const allDrills = sessions.flatMap((s: any) => s.mainBlock || []);
+  const allDrills: Drill[] = sessions.flatMap((s) => s.mainBlock || []);
   if (!allDrills.length) return;
 
   const firstDrill = allDrills[0];
 
   if (prefs.includeCognitive && !allDrills.some(isCognitiveDrill)) {
-    firstDrill.description = `${firstDrill.description} Inserisci chiamate casuali di colori/segnali per decision making e reazione visiva.`;
+    firstDrill.description = appendIfMissing(
+      firstDrill.description,
+      'Inserisci chiamate casuali di colori/segnali per decision making e reazione visiva.',
+      'decision making'
+    );
     firstDrill.notes = addUniqueNote(firstDrill.notes, 'Componente cognitiva obbligatoria: risposta a stimoli visivi/verbali.');
   }
 
@@ -232,7 +245,11 @@ const ensureCognitiveAndBlazepodCoverage = (data: WeeklyPlan, prefs: UserPrefere
     firstDrill.equipment = firstDrill.equipment
       ? `${firstDrill.equipment}, BlazePod`
       : 'BlazePod';
-    firstDrill.description = `${firstDrill.description} Usa BlazePod per trigger luminosi e cambi direzione reattivi.`;
+    firstDrill.description = appendIfMissing(
+      firstDrill.description,
+      'Usa BlazePod per trigger luminosi e cambi direzione reattivi.',
+      'blazepod'
+    );
     firstDrill.notes = addUniqueNote(firstDrill.notes, 'Uso BlazePod obbligatorio: reagire a luci e segnali colore.');
   }
 };
