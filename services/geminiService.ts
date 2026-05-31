@@ -227,7 +227,7 @@ const isCognitiveDrill = (drill: Drill): boolean => {
 };
 
 const isBlazepodDrill = (drill: Drill): boolean => {
-  const blazepodKeywords = ['blazepod', 'blaze pod', 'pod'];
+  const blazepodKeywords = ['blazepod', 'blaze pod'];
   return [drill.name, drill.description, drill.notes, drill.setup, drill.equipment].some((field) => includesAnyKeyword(field, blazepodKeywords));
 };
 
