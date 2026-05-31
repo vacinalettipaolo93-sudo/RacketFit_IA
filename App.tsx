@@ -572,7 +572,13 @@ const App: React.FC = () => {
               </div>
             </div>
           ) : (
-            <PlanDisplay plan={plan} onReset={reset} onSave={handleSavePlan} />
+            <PlanDisplay
+              plan={plan}
+              onReset={reset}
+              onSave={handleSavePlan}
+              saveFocus={lastPrefs?.focus}
+              saveGroupSize={lastPrefs?.groupSize}
+            />
           )
         )}
       </main>

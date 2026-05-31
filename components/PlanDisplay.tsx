@@ -8,9 +8,11 @@ interface PlanDisplayProps {
   plan: WeeklyPlan;
   onReset: () => void;
   onSave: (title: string) => void;
+  saveFocus?: string;
+  saveGroupSize?: string;
 }
 
-export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onReset, onSave }) => {
+export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onReset, onSave, saveFocus, saveGroupSize }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
   const [hasSaved, setHasSaved] = useState(false);
@@ -18,8 +20,11 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onReset, onSave 
   const handleSaveClick = () => {
     if (hasSaved) return;
     setIsSaving(true);
-    // Suggest a default title
-    setSaveTitle(`${plan.sessions.length} Sessioni - ${new Date().toLocaleDateString()}`);
+    const sessionLabel = `${plan.sessions.length} ${plan.sessions.length === 1 ? 'sessione' : 'sessioni'}`;
+    const peopleLabel = saveGroupSize?.trim() || 'N/D persone';
+    const focusLabel = saveFocus?.trim() || 'Focus non specificato';
+    const dateLabel = new Date().toLocaleDateString('it-IT');
+    setSaveTitle(`${focusLabel} - ${sessionLabel} - ${peopleLabel} - ${dateLabel}`);
   };
 
   const confirmSave = () => {
