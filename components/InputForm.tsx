@@ -7,7 +7,8 @@ import {
   Sport,
   WarmupType,
   GroupSize,
-  SessionLocation
+  SessionLocation,
+  EquipmentMode
 } from '../types';
 import { Button } from './Button';
 import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2, Users, Radio, MapPin } from 'lucide-react';
@@ -23,6 +24,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
   const [level, setLevel] = useState<FitnessLevel>(FitnessLevel.INTERMEDIATE);
   const [sessions, setSessions] = useState<SessionCount>(SessionCount.TWO);
   const [focus, setFocus] = useState<TrainingFocus>(TrainingFocus.MIXED);
+  const [equipmentMode, setEquipmentMode] = useState<EquipmentMode>(EquipmentMode.BODYWEIGHT_MINIMAL);
   const [phase, setPhase] = useState<UserPreferences['phase']>('In-season');
 
   // NEW: location
@@ -41,6 +43,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
       level,
       sessionsPerWeek: sessions,
       focus,
+      equipmentMode,
       phase,
       includeCognitive,
       useBlazepod,
@@ -207,6 +210,32 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Equipment Mode */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+            <Dumbbell size={18} className="text-tennis-accent" /> Attrezzatura disponibile
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {Object.values(EquipmentMode).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setEquipmentMode(mode)}
+                className={`px-3 py-3 rounded-xl text-xs sm:text-sm font-medium border text-left transition-all ${
+                  equipmentMode === mode
+                    ? 'bg-tennis-dark text-white border-tennis-dark shadow-md'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-tennis-dark'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Corpo libero: solo cinesini/coni. Racchetta: solo palle, racchette, strumenti di tennis/padel/pickleball e ostacoli.
+          </p>
         </div>
 
         {/* Phase */}

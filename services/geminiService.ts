@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan } from "../types";
+import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan, EquipmentMode } from "../types";
 
 // Helper functions for manual API Key management
 const STORAGE_KEY = 'gemini_api_key';
@@ -29,6 +29,7 @@ const trainingPlanSchema: Schema = {
     weeklyGoal: { type: Type.STRING },
     advice: { type: Type.STRING },
     location: { type: Type.STRING, description: "Campo oppure Fuori" },
+    equipmentMode: { type: Type.STRING, description: "Modalità attrezzatura selezionata dall'utente" },
     sessions: {
       type: Type.ARRAY,
       items: {
@@ -63,7 +64,7 @@ const trainingPlanSchema: Schema = {
       }
     }
   },
-  required: ["weeklyGoal", "sessions", "advice", "location"]
+  required: ["weeklyGoal", "sessions", "advice", "location", "equipmentMode"]
 };
 
 // --- LESSON PLAN SCHEMA (UNCHANGED) ---
@@ -115,6 +116,26 @@ const lessonPlanSchema: Schema = {
   required: ["title", "warmup", "basketDrills", "liveDrills", "finalGame"]
 };
 
+const getEquipmentRules = (prefs: UserPreferences): string => {
+  if (prefs.equipmentMode === EquipmentMode.RACKET_SPECIFIC) {
+    return `
+VINCOLI ATTREZZATURA (OBBLIGATORI):
+- MODALITÀ: Solo strumenti specifici sport di racchetta.
+- CONSENTITO: palle/palline da tennis-padel-pickleball, racchette/pale, attrezzatura specifica di tennis/padel/pickleball, ostacoli.
+- NON CONSENTITO: elastici, palle mediche, manubri, bilancieri, kettlebell, macchine, corde, scalette o altri strumenti non nella lista consentita.
+- Ogni drill deve essere realizzabile SOLO con gli strumenti consentiti.
+`;
+  }
+
+  return `
+VINCOLI ATTREZZATURA (OBBLIGATORI):
+- MODALITÀ: Corpo libero / attrezzatura minima.
+- CONSENTITO: solo corpo libero + cinesini/coni (eventuali linee del campo come riferimento).
+- NON CONSENTITO: elastici, palle mediche, palle, racchette/pale, ostacoli, scalette, corde e qualsiasi altra attrezzatura aggiuntiva.
+- Ogni drill deve essere realizzabile SOLO con gli strumenti consentiti.
+`;
+};
+
 const getApiKeyOrThrow = () => {
   let apiKey = getStoredApiKey();
   if (!apiKey) {
@@ -136,6 +157,7 @@ export const generateTrainingPlan = async (prefs: UserPreferences): Promise<Week
   const apiKey = getApiKeyOrThrow();
   const genAI = new GoogleGenAI({ apiKey: apiKey });
   const model = "gemini-3-flash-preview";
+  const equipmentRules = getEquipmentRules(prefs);
 
   const prompt = `
 Sei un preparatore atletico esperto specializzato nel ${prefs.sport}.
@@ -152,6 +174,7 @@ SCELTE UTENTE:
 - Sessioni: ${prefs.sessionsPerWeek}
 - Numero partecipanti: ${prefs.groupSize}
 - LOCATION: ${prefs.location} (Campo oppure Fuori)
+- Modalità attrezzatura: ${prefs.equipmentMode}
 
 VINCOLI OBBLIGATORI PER OGNI SESSIONE:
 - DURATA: ESATTAMENTE 50 minuti di lavoro NETTI (scrivi "50 min" in totalDuration).
@@ -160,8 +183,8 @@ VINCOLI OBBLIGATORI PER OGNI SESSIONE:
 - NON inserire partite finali / set / tie-break.
 - NON inserire esercizi "al cesto" (nessun feeding continuo del coach).
 - Gli esercizi devono essere eseguibili quasi sempre tra di loro (partner drill): imposta pairWork=true nella maggior parte dei drill.
-- Usa solo attrezzi semplici: coni, cinesini, corda, elastici leggeri, palline (solo per coordinazione, NON per cesto), scaletta se vuoi.
 - Lingua: ITALIANO, tecnico ma semplice.
+${equipmentRules}
 
 VINCOLO FORMATO DURATA ESERCIZI (IMPORTANTISSIMO):
 - In "durationOrReps" NON devi mai scrivere minuti tipo: "10 min", "8 minuti", "5'".
@@ -207,6 +230,7 @@ Rispondi SOLO con JSON valido secondo lo schema.
 
     // Client-side hard guards for consistency
     data.location = prefs.location;
+    data.equipmentMode = prefs.equipmentMode;
     data.sessions = (data.sessions || []).map((s) => ({
       ...s,
       totalDuration: '50 min',
