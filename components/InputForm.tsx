@@ -234,7 +234,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
             ))}
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Corpo libero: solo cinesini/coni. Racchetta: solo palle, racchette, strumenti di tennis/padel/pickleball e ostacoli.
+            Corpo libero: solo cinesini/coni. Con attrezzi: elastici, palle mediche, bastoni, step. Racchetta: solo palle, racchette, strumenti di tennis/padel e ostacoli.
           </p>
         </div>
 
