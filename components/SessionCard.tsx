@@ -103,7 +103,43 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
                 {session.warmup.type === 'Gioco' ? <Gamepad2 size={14} /> : <Flame size={14} />}
                 Riscaldamento extra ({session.warmup.duration}) — {session.warmup.type}
               </h4>
-              <p className="text-sm text-orange-900">{session.warmup.description}</p>
+              <p className="text-sm text-orange-900 font-semibold mb-1">{session.warmup.title}</p>
+              <p className="text-sm text-orange-900 mb-3">{session.warmup.description}</p>
+              {session.warmup.equipment && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-800 bg-orange-100 border border-orange-200 px-2 py-1 rounded mb-3">
+                  <Dumbbell size={11} /> Materiali warm-up: {session.warmup.equipment}
+                </span>
+              )}
+              <div className="grid gap-3 md:grid-cols-2">
+                <InstructionBlock
+                  title="Setup materiali / posizionamento"
+                  icon={<Settings size={11} />}
+                  content={session.warmup.setup}
+                  tone="bg-white border-orange-100"
+                  textTone="text-orange-900"
+                />
+                <InstructionBlock
+                  title="Esecuzione pratica"
+                  icon={<PlayCircle size={11} />}
+                  content={session.warmup.execution}
+                  tone="bg-white border-orange-100"
+                  textTone="text-orange-900"
+                />
+                <InstructionBlock
+                  title="Rotazione atleti"
+                  icon={<Repeat size={11} />}
+                  content={session.warmup.rotation}
+                  tone="bg-white border-orange-100"
+                  textTone="text-orange-900"
+                />
+                <InstructionBlock
+                  title="Organizzazione 10 minuti"
+                  icon={<Clock size={11} />}
+                  content={session.warmup.timePlan}
+                  tone="bg-white border-orange-100"
+                  textTone="text-orange-900"
+                />
+              </div>
             </div>
           )}
 

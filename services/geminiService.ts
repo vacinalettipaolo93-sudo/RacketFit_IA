@@ -45,6 +45,11 @@ const trainingPlanSchema: Schema = {
               type: { type: Type.STRING, description: "Tipo riscaldamento: 'Normale' oppure 'Gioco'" },
               title: { type: Type.STRING },
               description: { type: Type.STRING },
+              setup: { type: Type.STRING },
+              execution: { type: Type.STRING },
+              rotation: { type: Type.STRING },
+              timePlan: { type: Type.STRING },
+              equipment: { type: Type.STRING },
               isExtra: { type: Type.BOOLEAN, description: "Must be true, warm-up is extra rispetto al blocco principale" }
             }
           },
@@ -188,17 +193,89 @@ const normalizeMainDuration = (value?: string): '50 min' | '55 min' => {
   return value === '55 min' ? '55 min' : '50 min';
 };
 
+const buildWarmupRotation = (prefs: UserPreferences): string => {
+  if (prefs.groupSize === '1 Persona') {
+    return 'Atleta singolo: completa tutte le ripetizioni senza pausa lunga, recupero solo nel reset previsto dal blocco tempo.';
+  }
+
+  if (prefs.groupSize === '2 Persone') {
+    return 'A coppie: atleta A lavora mentre atleta B osserva e prepara il turno; cambio a ogni chiamata o ogni 20-30s.';
+  }
+
+  if (prefs.groupSize === '3 Persone' || prefs.groupSize === '4 Persone') {
+    return 'Fila corta: 1 atleta in esecuzione, 1 pronto in partenza, gli altri recuperano attivamente; rotazione continua a ogni passaggio.';
+  }
+
+  return 'Gruppo 5+: organizza 2 corsie uguali con fila corta per corsia; parte 1 atleta per corsia, poi entra subito il successivo.';
+};
+
 const buildWarmupBlock = (prefs: UserPreferences) => {
   if (!prefs.includeWarmup) return undefined;
 
   const isGame = prefs.warmupType === 'Gioco';
+  const isCampo = prefs.location === 'Campo';
+  const rotation = buildWarmupRotation(prefs);
+  const equipment = [
+    '6-8 cinesini',
+    prefs.useBlazepod ? 'BlazePod' : '',
+    prefs.useBuzzoni ? 'App/Sistema Buzzoni (smartphone/tablet)' : ''
+  ].filter(Boolean).join(', ');
+
+  const setupBase = isCampo
+    ? `Usa ${prefs.sport === 'Padel' ? 'linee del campo da padel' : 'linee del campo da tennis'}: crea 2 corsie con 6 cinesini tra linea di fondo e linea del servizio (8-10 m), con 1 zona reset al centro fondo. Punto di partenza: atleta dietro il primo cinesino in posizione atletica.`
+    : 'Delimita un rettangolo 10x8 m con 6 cinesini: 2 coni partenza, 2 coni cambio direzione, 2 coni arrivo + zona reset laterale. Punto di partenza: atleta dietro al cono di start, ginocchia leggere e busto attivo.';
+
+  const extraSignalSetup = prefs.useBlazepod
+    ? 'Posiziona 4 BlazePod sui riferimenti di cambio direzione (2 per corsia), ben visibili dalla partenza.'
+    : prefs.useBuzzoni
+      ? "Posiziona smartphone/tablet con app Buzzoni a lato stazione, volume alto, associando ogni chiamata a un cono target."
+      : prefs.includeCognitive
+        ? 'Prepara 3 chiamate semplici (colore/numero/direzione) associate ai coni prima di iniziare.'
+        : '';
+
+  const executionGame = [
+    'Gioco “Semaforo Reattivo”: al segnale del coach l’atleta parte in split-step, accelera verso il target chiamato, tocca il riferimento e rientra rapido in partenza.',
+    'Alterna chiamate avanti/laterali/retro per mantenere attivazione ludica ma specifica per tennis/padel.',
+    prefs.useBlazepod
+      ? 'Trigger di partenza dai BlazePod: parte solo sul pod acceso corretto e chiude il passaggio con tocco pod.'
+      : '',
+    prefs.useBuzzoni
+      ? "Trigger di partenza da Buzzoni: reagisce alla chiamata dell'app (numero/colore/direzione) e raggiunge subito il cono associato."
+      : '',
+    prefs.includeCognitive
+      ? 'Inserisci 1 finta chiamata ogni 3-4 turni (es. cambio target all’ultimo secondo) per decision making e reazione.'
+      : ''
+  ].filter(Boolean).join(' ');
+
+  const executionNormal = [
+    'Fase 1: mobilità dinamica in avanzamento (anche, caviglie, spalle) lungo la corsia con ritorno in jogging controllato.',
+    'Fase 2: footwork progressivo (skip, passi laterali, crossover) con aumenti graduali di intensità dal 60% all’80%.',
+    'Fase 3: accelerazioni brevi e frenata tecnica sul cono finale, rientro in posizione atletica pronta al turno successivo.',
+    prefs.useBlazepod
+      ? 'Nelle accelerazioni finali usa BlazePod come trigger visivo di direzione, senza anticipare la partenza.'
+      : '',
+    prefs.useBuzzoni
+      ? "Nelle accelerazioni finali usa Buzzoni per chiamate casuali di target e cambio direzione reattivo."
+      : '',
+    prefs.includeCognitive
+      ? 'Durante i passaggi il coach inserisce chiamate cognitive semplici (colore/numero) da eseguire senza fermarsi.'
+      : ''
+  ].filter(Boolean).join(' ');
+
+  const timePlan = isGame
+    ? '0-2 min: briefing rapido regole + prova movimenti base. 2-8 min: 3 blocchi da 2 min di gioco reattivo con 30s reset tra blocchi. 8-10 min: finale ad alta frequenza (turni brevi) e transizione al blocco principale.'
+    : '0-3 min: mobilità dinamica guidata. 3-7 min: progressione footwork (skip/laterale/crossover) con intensità crescente. 7-10 min: accelerazioni brevi + frenata tecnica + 1 min transizione alla prima stazione principale.';
+
   return {
     duration: '10 min' as const,
     type: prefs.warmupType,
-    title: isGame ? 'Riscaldamento ludico' : 'Riscaldamento classico',
-    description: isGame
-      ? 'Attivazione con gioco rapido, reazione e coordinazione a intensità progressiva.'
-      : 'Attivazione progressiva con mobilità dinamica, corsa tecnica e preparazione muscolare.',
+    title: isGame ? 'Gioco reattivo “Semaforo” a corridoi' : 'Attivazione progressiva mobilità + footwork',
+    description: `${isGame ? 'Warm-up ludico operativo' : 'Warm-up classico operativo'} coerente con focus "${prefs.focus}" e location "${prefs.location}".`,
+    setup: [setupBase, extraSignalSetup].filter(Boolean).join(' '),
+    execution: isGame ? executionGame : executionNormal,
+    rotation,
+    timePlan,
+    equipment,
     isExtra: true as const
   };
 };
