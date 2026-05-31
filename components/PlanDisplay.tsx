@@ -12,23 +12,27 @@ interface PlanDisplayProps {
   saveGroupSize?: string;
 }
 
+const GROUP_SIZE_RANGE_REGEX = /^(\d+)\s*-\s*(\d+)(?:\s*(?:persona|persone))?$/i;
+const GROUP_SIZE_SINGLE_REGEX = /^(\d+)(?:\s*(?:persona|persone))?$/i;
+const GROUP_SIZE_LABEL_REGEX = /\bpersona\b|\bpersone\b/i;
+
 const formatGroupSizeLabel = (groupSize?: string): string => {
   const normalizedGroupSize = groupSize?.trim();
   if (!normalizedGroupSize) return 'Persone non specificate';
 
-  const rangeMatch = normalizedGroupSize.match(/^(\d+)\s*-\s*(\d+)(?:\s*(?:persona|persone))?$/i);
+  const rangeMatch = normalizedGroupSize.match(GROUP_SIZE_RANGE_REGEX);
   if (rangeMatch) {
-    const [, from, to] = rangeMatch;
+    const [_fullMatch, from, to] = rangeMatch;
     return `${from}-${to} persone`;
   }
 
-  const singleMatch = normalizedGroupSize.match(/^(\d+)(?:\s*(?:persona|persone))?$/i);
+  const singleMatch = normalizedGroupSize.match(GROUP_SIZE_SINGLE_REGEX);
   if (singleMatch) {
     const participants = Number(singleMatch[1]);
     return `${participants} ${participants === 1 ? 'persona' : 'persone'}`;
   }
 
-  if (/\bpersona\b|\bpersone\b/i.test(normalizedGroupSize)) {
+  if (GROUP_SIZE_LABEL_REGEX.test(normalizedGroupSize)) {
     return normalizedGroupSize;
   }
 
