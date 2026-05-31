@@ -8,9 +8,38 @@ interface PlanDisplayProps {
   plan: WeeklyPlan;
   onReset: () => void;
   onSave: (title: string) => void;
+  saveFocus?: string;
+  saveGroupSize?: string;
 }
 
-export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onReset, onSave }) => {
+const GROUP_SIZE_RANGE_REGEX = /^(\d+)\s*-\s*(\d+)(?:\s*(?:persona|persone))?$/i;
+const GROUP_SIZE_SINGLE_REGEX = /^(\d+)(?:\s*(?:persona|persone))?$/i;
+const GROUP_SIZE_LABEL_REGEX = /\bpersona\b|\bpersone\b/i;
+
+const formatGroupSizeLabel = (groupSize?: string): string => {
+  const normalizedGroupSize = groupSize?.trim();
+  if (!normalizedGroupSize) return 'Persone non specificate';
+
+  const rangeMatch = normalizedGroupSize.match(GROUP_SIZE_RANGE_REGEX);
+  if (rangeMatch) {
+    const [_fullMatch, from, to] = rangeMatch;
+    return `${from}-${to} persone`;
+  }
+
+  const singleMatch = normalizedGroupSize.match(GROUP_SIZE_SINGLE_REGEX);
+  if (singleMatch) {
+    const participants = Number(singleMatch[1]);
+    return `${participants} ${participants === 1 ? 'persona' : 'persone'}`;
+  }
+
+  if (GROUP_SIZE_LABEL_REGEX.test(normalizedGroupSize)) {
+    return normalizedGroupSize;
+  }
+
+  return `${normalizedGroupSize} persone`;
+};
+
+export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onReset, onSave, saveFocus, saveGroupSize }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
   const [hasSaved, setHasSaved] = useState(false);
@@ -18,8 +47,11 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onReset, onSave 
   const handleSaveClick = () => {
     if (hasSaved) return;
     setIsSaving(true);
-    // Suggest a default title
-    setSaveTitle(`${plan.sessions.length} Sessioni - ${new Date().toLocaleDateString()}`);
+    const sessionLabel = `${plan.sessions.length} ${plan.sessions.length === 1 ? 'sessione' : 'sessioni'}`;
+    const peopleLabel = formatGroupSizeLabel(saveGroupSize);
+    const focusLabel = saveFocus?.trim() || 'Focus non specificato';
+    const dateLabel = new Date().toLocaleDateString('it-IT');
+    setSaveTitle(`${focusLabel} - ${sessionLabel} - ${peopleLabel} - ${dateLabel}`);
   };
 
   const confirmSave = () => {
