@@ -37,7 +37,17 @@ const trainingPlanSchema: Schema = {
         properties: {
           dayName: { type: Type.STRING },
           focusArea: { type: Type.STRING },
-          totalDuration: { type: Type.STRING, description: "Must be exactly '50 min'" },
+          totalDuration: { type: Type.STRING, description: "Must be exactly '50 min' or '55 min' for the main block" },
+          warmup: {
+            type: Type.OBJECT,
+            properties: {
+              duration: { type: Type.STRING, description: "Must be exactly '10 min'" },
+              type: { type: Type.STRING, description: "Tipo riscaldamento: 'Normale' oppure 'Gioco'" },
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              isExtra: { type: Type.BOOLEAN, description: "Must be true, warm-up is extra rispetto al blocco principale" }
+            }
+          },
           location: { type: Type.STRING, description: "Campo oppure Fuori" },
           mainBlock: {
             type: Type.ARRAY,
@@ -163,6 +173,70 @@ VINCOLI ATTREZZATURA (OBBLIGATORI):
 `;
 };
 
+const normalizeMainDuration = (value?: string): '50 min' | '55 min' => {
+  return value === '55 min' ? '55 min' : '50 min';
+};
+
+const buildWarmupBlock = (prefs: UserPreferences) => {
+  if (!prefs.includeWarmup) return undefined;
+
+  const isGame = prefs.warmupType === 'Gioco';
+  return {
+    duration: '10 min' as const,
+    type: prefs.warmupType,
+    title: isGame ? 'Riscaldamento ludico' : 'Riscaldamento classico',
+    description: isGame
+      ? 'Attivazione con gioco rapido, reazione e coordinazione a intensità progressiva.'
+      : 'Attivazione progressiva con mobilità dinamica, corsa tecnica e preparazione muscolare.',
+    isExtra: true as const
+  };
+};
+
+const addUniqueNote = (notes: string | undefined, addition: string): string => {
+  if (!notes) return addition;
+  if (notes.toLowerCase().includes(addition.toLowerCase())) return notes;
+  return `${notes} ${addition}`;
+};
+
+const includesAnyKeyword = (value: string | undefined, keywords: string[]): boolean => {
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return keywords.some((k) => normalized.includes(k));
+};
+
+const isCognitiveDrill = (drill: any): boolean => {
+  const cognitiveKeywords = ['cognitiv', 'decision', 'reatt', 'stimolo', 'visiv', 'colore', 'segnale', 'chiamata'];
+  return [drill.name, drill.description, drill.notes, drill.setup].some((field) => includesAnyKeyword(field, cognitiveKeywords));
+};
+
+const isBlazepodDrill = (drill: any): boolean => {
+  const blazepodKeywords = ['blazepod', 'blaze pod', 'luci', 'pod'];
+  return [drill.name, drill.description, drill.notes, drill.setup, drill.equipment].some((field) => includesAnyKeyword(field, blazepodKeywords));
+};
+
+const ensureCognitiveAndBlazepodCoverage = (data: WeeklyPlan, prefs: UserPreferences) => {
+  const sessions = data.sessions || [];
+  if (!sessions.length) return;
+
+  const allDrills = sessions.flatMap((s: any) => s.mainBlock || []);
+  if (!allDrills.length) return;
+
+  const firstDrill = allDrills[0];
+
+  if (prefs.includeCognitive && !allDrills.some(isCognitiveDrill)) {
+    firstDrill.description = `${firstDrill.description} Inserisci chiamate casuali di colori/segnali per decision making e reazione visiva.`;
+    firstDrill.notes = addUniqueNote(firstDrill.notes, 'Componente cognitiva obbligatoria: risposta a stimoli visivi/verbali.');
+  }
+
+  if (prefs.useBlazepod && !allDrills.some(isBlazepodDrill)) {
+    firstDrill.equipment = firstDrill.equipment
+      ? `${firstDrill.equipment}, BlazePod`
+      : 'BlazePod';
+    firstDrill.description = `${firstDrill.description} Usa BlazePod per trigger luminosi e cambi direzione reattivi.`;
+    firstDrill.notes = addUniqueNote(firstDrill.notes, 'Uso BlazePod obbligatorio: reagire a luci e segnali colore.');
+  }
+};
+
 const getApiKeyOrThrow = () => {
   let apiKey = getStoredApiKey();
   if (!apiKey) {
@@ -202,16 +276,26 @@ SCELTE UTENTE:
 - Numero partecipanti: ${prefs.groupSize}
 - LOCATION: ${prefs.location} (Campo oppure Fuori)
 - Modalità attrezzatura: ${prefs.equipmentMode}
+- Riscaldamento extra: ${prefs.includeWarmup ? 'SÌ (10 min extra)' : 'NO'}
+- Tipo riscaldamento: ${prefs.warmupType}
+- Parte cognitiva: ${prefs.includeCognitive ? 'SÌ' : 'NO'}
+- Uso BlazePod: ${prefs.useBlazepod ? 'SÌ' : 'NO'}
 
 VINCOLI OBBLIGATORI PER OGNI SESSIONE:
-- DURATA: ESATTAMENTE 50 minuti di lavoro NETTI (scrivi "50 min" in totalDuration).
-- NON inserire riscaldamento.
+- DURATA BLOCCO PRINCIPALE: 50 oppure 55 minuti NETTI (scrivi "50 min" o "55 min" in totalDuration).
+- Se Riscaldamento extra = SÌ: aggiungi oggetto "warmup" con duration "10 min", type "${prefs.warmupType}", isExtra=true.
+- Se Riscaldamento extra = NO: non aggiungere warmup.
 - NON inserire defaticamento.
 - NON inserire partite finali / set / tie-break.
 - NON inserire esercizi "al cesto" (nessun feeding continuo del coach).
 - Gli esercizi devono essere eseguibili quasi sempre tra di loro (partner drill): imposta pairWork=true nella maggior parte dei drill.
 - Lingua: ITALIANO, tecnico ma semplice.
 ${equipmentRules}
+
+VINCOLI COGNITIVI E BLAZEPOD (OBBLIGATORI):
+- Se Parte cognitiva = SÌ: almeno un drill deve includere esplicitamente componenti cognitive/reattive (decision making, stimoli visivi, chiamate, colori, segnali, reazione).
+- Se Uso BlazePod = SÌ: almeno un drill deve usare esplicitamente BlazePod nelle istruzioni operative o nel campo equipment.
+- Se entrambe sono SÌ, anche lo stesso drill può coprire entrambi i vincoli.
 
 VINCOLO FORMATO DURATA ESERCIZI (IMPORTANTISSIMO):
 - In "durationOrReps" NON devi mai scrivere minuti tipo: "10 min", "8 minuti", "5'".
@@ -267,7 +351,7 @@ Rispondi SOLO con JSON valido secondo lo schema.
         responseMimeType: "application/json",
         responseSchema: trainingPlanSchema,
         systemInstruction:
-          "Sei un coach d'élite. Rispondi con un JSON valido. Rispetta TUTTI i vincoli (50 min, no warmup, no cooldown, no final game, no cesto). durationOrReps DEVE essere sempre nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere 'setup' (istruzioni pratiche con cinesini/attrezzi) e 'totalDurationEstimate' (~N min). Se la modalità è 'Con attrezzi', almeno il 70% degli esercizi deve usare elastici, palle mediche, bastoni o step nel campo 'equipment'."
+          "Sei un coach d'élite. Rispondi con JSON valido. Rispetta i vincoli di durata del blocco principale (50 o 55 min), warm-up opzionale extra da 10 min, niente cooldown/final game/cesto. durationOrReps DEVE essere nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere setup e totalDurationEstimate (~N min). Se richiesti parte cognitiva o BlazePod, almeno un drill deve rispettare esplicitamente tali vincoli. Se la modalità è 'Con attrezzi', almeno il 70% dei drill deve usare elastici, palle mediche, bastoni o step."
       }
     });
 
@@ -279,15 +363,18 @@ Rispondi SOLO con JSON valido secondo lo schema.
     // Client-side hard guards for consistency
     data.location = prefs.location;
     data.equipmentMode = prefs.equipmentMode;
+    const warmup = buildWarmupBlock(prefs);
     data.sessions = (data.sessions || []).map((s) => ({
       ...s,
-      totalDuration: '50 min',
+      totalDuration: normalizeMainDuration(s.totalDuration),
+      warmup,
       location: prefs.location,
       mainBlock: (s.mainBlock || []).map((d) => ({
         ...d,
         location: prefs.location
       }))
     }));
+    ensureCognitiveAndBlazepodCoverage(data, prefs);
 
     return data;
   } catch (error) {
