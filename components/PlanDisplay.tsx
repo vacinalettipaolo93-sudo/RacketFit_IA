@@ -12,33 +12,33 @@ interface PlanDisplayProps {
   saveGroupSize?: string;
 }
 
+const formatGroupSizeLabel = (groupSize?: string): string => {
+  const normalizedGroupSize = groupSize?.trim();
+  if (!normalizedGroupSize) return 'Persone non specificate';
+
+  const rangeMatch = normalizedGroupSize.match(/^(\d+)\s*-\s*(\d+)(?:\s*(?:persona|persone))?$/i);
+  if (rangeMatch) {
+    const [, from, to] = rangeMatch;
+    return `${from}-${to} persone`;
+  }
+
+  const singleMatch = normalizedGroupSize.match(/^(\d+)(?:\s*(?:persona|persone))?$/i);
+  if (singleMatch) {
+    const participants = Number(singleMatch[1]);
+    return `${participants} ${participants === 1 ? 'persona' : 'persone'}`;
+  }
+
+  if (/\bpersona\b|\bpersone\b/i.test(normalizedGroupSize)) {
+    return normalizedGroupSize;
+  }
+
+  return `${normalizedGroupSize} persone`;
+};
+
 export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onReset, onSave, saveFocus, saveGroupSize }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
   const [hasSaved, setHasSaved] = useState(false);
-
-  const formatGroupSizeLabel = (groupSize?: string): string => {
-    const normalizedGroupSize = groupSize?.trim();
-    if (!normalizedGroupSize) return 'Persone non specificate';
-
-    const rangeMatch = normalizedGroupSize.match(/^(\d+)\s*-\s*(\d+)(?:\s*(?:persona|persone))?$/i);
-    if (rangeMatch) {
-      const [, from, to] = rangeMatch;
-      return `${from}-${to} persone`;
-    }
-
-    const singleMatch = normalizedGroupSize.match(/^(\d+)(?:\s*(?:persona|persone))?$/i);
-    if (singleMatch) {
-      const participants = Number(singleMatch[1]);
-      return `${participants} ${participants === 1 ? 'persona' : 'persone'}`;
-    }
-
-    if (/\bpersona\b|\bpersone\b/i.test(normalizedGroupSize)) {
-      return normalizedGroupSize;
-    }
-
-    return `${normalizedGroupSize} persone`;
-  };
 
   const handleSaveClick = () => {
     if (hasSaved) return;
