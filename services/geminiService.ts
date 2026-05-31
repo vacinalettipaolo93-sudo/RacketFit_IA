@@ -193,6 +193,92 @@ const normalizeMainDuration = (value?: string): '50 min' | '55 min' => {
   return value === '55 min' ? '55 min' : '50 min';
 };
 
+type WarmupTemplate = {
+  title: string;
+  setup: (isCampo: boolean, sport: UserPreferences['sport']) => string;
+  execution: string;
+  timePlan: string;
+  equipment: string;
+};
+
+const GAME_WARMUP_TEMPLATES: WarmupTemplate[] = [
+  {
+    title: 'Gioco “Caccia ai coni” a coppie',
+    setup: (isCampo, sport) =>
+      isCampo
+        ? `Usa ${sport === 'Padel' ? 'le linee del campo da padel' : 'le linee del campo da tennis'} e crea 2 corsie con 8 cinesini colorati (4 per corsia). Metti 1 cono-base dietro la linea di partenza e 3 coni-target (corto/laterale/profondo) per corsia.`
+        : 'Delimita due rettangoli 8x5 m con 8 cinesini colorati. In ogni rettangolo marca una base di partenza e 3 target (avanti, laterale destro, laterale sinistro).',
+    execution:
+      'A turno il coach chiama un colore/target: l’atleta parte in split-step, raggiunge il cono corretto, lo tocca e torna in base. Ogni chiamata vale 1 punto. Dopo 45-60s si scambiano i ruoli. Obiettivo: ritmo alto, divertimento e cambi direzione brevi.',
+    timePlan:
+      '0-2 min spiegazione regole + prova. 2-8 min 4 manche da 90s (30s reset). 8-10 min manche finale “sudden point” a chiamate rapide.',
+    equipment: '8 cinesini colorati, 2 coni base'
+  },
+  {
+    title: 'Gioco “Re e Ladro” con inseguimento controllato',
+    setup: (isCampo, sport) =>
+      isCampo
+        ? `Usa metà ${sport === 'Padel' ? 'campo da padel' : 'campo da tennis'}: segna con 6 cinesini 3 porte (sinistra, centro, destra) a 4-6 m dalla linea di partenza.`
+        : 'Delimita un rettangolo 10x6 m con 6 cinesini e crea 3 porte di passaggio sul lato opposto alla partenza.',
+    execution:
+      'In coppia: “Re” parte mezzo passo avanti, “Ladro” insegue e prova a passare nella stessa porta entro 3 secondi. Il coach chiama la porta all’ultimo istante. Ogni coppia fa turni rapidi e poi cambia ruolo. Lavoro vivace, competitivo e facile da gestire.',
+    timePlan:
+      '0-2 min spiegazione + demo. 2-8 min 3 blocchi da 2 min con 30s recupero. 8-10 min staffetta finale a coppie.',
+    equipment: '6 cinesini'
+  },
+  {
+    title: 'Gioco “Navetta a punteggio” su diagonali',
+    setup: (isCampo, sport) =>
+      isCampo
+        ? `Segna 4 zone bersaglio sulle diagonali del ${sport === 'Padel' ? 'campo da padel' : 'campo da tennis'} con 8 cinesini (2 per zona) e 1 zona start centrale.`
+        : 'Delimita un quadrato 8x8 m con 8 cinesini e identifica 4 angoli-bersaglio + 1 zona start al centro.',
+    execution:
+      'Il coach assegna punti diversi ai bersagli (1,2,3). L’atleta parte dal centro, raggiunge il bersaglio chiamato e rientra subito al centro prima della chiamata successiva. Vince chi totalizza più punti nel blocco. Stimola attivazione, rapidità e decisione in chiave ludica.',
+    timePlan:
+      '0-2 min setup punteggi + prova. 2-7 min 3 round da 90s con 30s recupero. 7-10 min round finale a tempo con classifica.',
+    equipment: '8 cinesini, marker numerici semplici'
+  }
+];
+
+const NORMAL_WARMUP_TEMPLATES: WarmupTemplate[] = [
+  {
+    title: 'Attivazione progressiva mobilità + footwork',
+    setup: (isCampo, sport) =>
+      isCampo
+        ? `Crea 2 corsie da 8-10 m usando le linee del ${sport === 'Padel' ? 'campo da padel' : 'campo da tennis'} e 6 cinesini (partenza, cambio direzione, arrivo).`
+        : 'Delimita un rettangolo 10x8 m con 6 cinesini: partenza, cambio direzione e arrivo in due corsie.',
+    execution:
+      'Fase 1 mobilità dinamica in avanzamento (anche, caviglie, spalle). Fase 2 footwork progressivo (skip, passi laterali, crossover) alzando gradualmente l’intensità. Fase 3 accelerazioni brevi con frenata tecnica e ritorno controllato.',
+    timePlan:
+      '0-3 min mobilità dinamica guidata. 3-7 min progressione footwork. 7-10 min accelerazioni brevi + transizione al blocco principale.',
+    equipment: '6 cinesini'
+  },
+  {
+    title: 'Attivazione coordinativa a corridoi alternati',
+    setup: (isCampo, sport) =>
+      isCampo
+        ? `Prepara 2 corridoi paralleli sfruttando le linee del ${sport === 'Padel' ? 'campo da padel' : 'campo da tennis'} con 7 cinesini per corridoio (zig-zag corto).`
+        : 'Crea 2 corridoi 9x2 m con 14 cinesini totali in disposizione zig-zag, più una zona reset laterale.',
+    execution:
+      'Gli atleti eseguono sequenze coordinate: ingresso frontale, uscita laterale, retro corsa breve e rientro. Ogni passaggio cambia pattern motorio, mantenendo postura bassa e appoggi rapidi.',
+    timePlan:
+      '0-2 min briefing pattern. 2-8 min 4 blocchi da 90s con 30s reset. 8-10 min richiami veloci e transizione.',
+    equipment: '12-14 cinesini'
+  },
+  {
+    title: 'Attivazione tecnica con partenze multi-direzione',
+    setup: (isCampo, sport) =>
+      isCampo
+        ? `Segna una stella a 5 direzioni con 10 cinesini al centro del ${sport === 'Padel' ? 'campo da padel' : 'campo da tennis'}; punto start nel cono centrale.`
+        : 'Delimita una stella a 5 direzioni in area 9x9 m con 10 cinesini e cono centrale di partenza.',
+    execution:
+      'Dal cono centrale l’atleta parte verso la direzione chiamata, esegue arresto controllato e rientra in split-step. Alterna direzioni avanti/laterale/diagonale/retro con intensità crescente.',
+    timePlan:
+      '0-2 min demo tecnica arresto/partenza. 2-7 min chiamate multi-direzione in blocchi da 60s. 7-10 min progressione ritmo alto e chiusura.',
+    equipment: '10 cinesini'
+  }
+];
+
 const buildWarmupRotation = (prefs: UserPreferences): string => {
   if (prefs.groupSize === '1 Persona') {
     return 'Atleta singolo: completa tutte le ripetizioni senza pausa lunga, recupero solo nel reset previsto dal blocco tempo.';
@@ -209,73 +295,32 @@ const buildWarmupRotation = (prefs: UserPreferences): string => {
   return 'Gruppo 5+: organizza 2 corsie uguali con fila corta per corsia; parte 1 atleta per corsia, poi entra subito il successivo.';
 };
 
-const buildWarmupBlock = (prefs: UserPreferences) => {
+const hashTextToSeed = (value: string): number =>
+  value
+    .split('')
+    .reduce((acc, char, index) => (acc + char.charCodeAt(0) * (index + 1)) % 997, 0);
+
+const buildWarmupBlock = (prefs: UserPreferences, sessionIndex: number) => {
   if (!prefs.includeWarmup) return undefined;
 
   const isGame = prefs.warmupType === 'Gioco';
   const isCampo = prefs.location === 'Campo';
   const rotation = buildWarmupRotation(prefs);
-  const equipment = [
-    '6-8 cinesini',
-    prefs.useBlazepod ? 'BlazePod' : '',
-    prefs.useBuzzoni ? 'App/Sistema Buzzoni (smartphone/tablet)' : ''
-  ].filter(Boolean).join(', ');
-
-  const setupBase = isCampo
-    ? `Usa ${prefs.sport === 'Padel' ? 'linee del campo da padel' : 'linee del campo da tennis'}: crea 2 corsie con 6 cinesini tra linea di fondo e linea del servizio (8-10 m), con 1 zona reset al centro fondo. Punto di partenza: atleta dietro il primo cinesino in posizione atletica.`
-    : 'Delimita un rettangolo 10x8 m con 6 cinesini: 2 coni partenza, 2 coni cambio direzione, 2 coni arrivo + zona reset laterale. Punto di partenza: atleta dietro al cono di start, ginocchia leggere e busto attivo.';
-
-  const extraSignalSetup = prefs.useBlazepod
-    ? 'Posiziona 4 BlazePod sui riferimenti di cambio direzione (2 per corsia), ben visibili dalla partenza.'
-    : prefs.useBuzzoni
-      ? "Posiziona smartphone/tablet con app Buzzoni a lato stazione, volume alto, associando ogni chiamata a un cono target."
-      : prefs.includeCognitive
-        ? 'Prepara 3 chiamate semplici (colore/numero/direzione) associate ai coni prima di iniziare.'
-        : '';
-
-  const executionGame = [
-    'Gioco “Semaforo Reattivo”: al segnale del coach l’atleta parte in split-step, accelera verso il target chiamato, tocca il riferimento e rientra rapido in partenza.',
-    'Alterna chiamate avanti/laterali/retro per mantenere attivazione ludica ma specifica per tennis/padel.',
-    prefs.useBlazepod
-      ? 'Trigger di partenza dai BlazePod: parte solo sul pod acceso corretto e chiude il passaggio con tocco pod.'
-      : '',
-    prefs.useBuzzoni
-      ? "Trigger di partenza da Buzzoni: reagisce alla chiamata dell'app (numero/colore/direzione) e raggiunge subito il cono associato."
-      : '',
-    prefs.includeCognitive
-      ? 'Inserisci 1 finta chiamata ogni 3-4 turni (es. cambio target all’ultimo secondo) per decision making e reazione.'
-      : ''
-  ].filter(Boolean).join(' ');
-
-  const executionNormal = [
-    'Fase 1: mobilità dinamica in avanzamento (anche, caviglie, spalle) lungo la corsia con ritorno in jogging controllato.',
-    'Fase 2: footwork progressivo (skip, passi laterali, crossover) con aumenti graduali di intensità dal 60% all’80%.',
-    'Fase 3: accelerazioni brevi e frenata tecnica sul cono finale, rientro in posizione atletica pronta al turno successivo.',
-    prefs.useBlazepod
-      ? 'Nelle accelerazioni finali usa BlazePod come trigger visivo di direzione, senza anticipare la partenza.'
-      : '',
-    prefs.useBuzzoni
-      ? "Nelle accelerazioni finali usa Buzzoni per chiamate casuali di target e cambio direzione reattivo."
-      : '',
-    prefs.includeCognitive
-      ? 'Durante i passaggi il coach inserisce chiamate cognitive semplici (colore/numero) da eseguire senza fermarsi.'
-      : ''
-  ].filter(Boolean).join(' ');
-
-  const timePlan = isGame
-    ? '0-2 min: briefing rapido regole + prova movimenti base. 2-8 min: 3 blocchi da 2 min di gioco reattivo con 30s reset tra blocchi. 8-10 min: finale ad alta frequenza (turni brevi) e transizione al blocco principale.'
-    : '0-3 min: mobilità dinamica guidata. 3-7 min: progressione footwork (skip/laterale/crossover) con intensità crescente. 7-10 min: accelerazioni brevi + frenata tecnica + 1 min transizione alla prima stazione principale.';
+  const templates = isGame ? GAME_WARMUP_TEMPLATES : NORMAL_WARMUP_TEMPLATES;
+  const seed = hashTextToSeed(`${prefs.focus}-${prefs.sport}`);
+  const template = templates[(sessionIndex + seed) % templates.length];
+  const setup = `${template.setup(isCampo, prefs.sport)} Punto di partenza: atleta dietro al riferimento centrale in posizione atletica.`;
 
   return {
     duration: '10 min' as const,
     type: prefs.warmupType,
-    title: isGame ? 'Gioco reattivo “Semaforo” a corridoi' : 'Attivazione progressiva mobilità + footwork',
+    title: template.title,
     description: `${isGame ? 'Warm-up ludico operativo' : 'Warm-up classico operativo'} coerente con focus "${prefs.focus}" e location "${prefs.location}".`,
-    setup: [setupBase, extraSignalSetup].filter(Boolean).join(' '),
-    execution: isGame ? executionGame : executionNormal,
+    setup,
+    execution: template.execution,
     rotation,
-    timePlan,
-    equipment,
+    timePlan: template.timePlan,
+    equipment: template.equipment,
     isExtra: true as const
   };
 };
@@ -500,6 +545,107 @@ const ensureSelectedCoverage = (data: WeeklyPlan, prefs: UserPreferences) => {
   }
 };
 
+type VarietyDimension = {
+  label: string;
+  setup: string;
+  execution: string;
+  rotation: string;
+  secondaryFocus: string;
+};
+
+const VARIETY_DIMENSIONS: VarietyDimension[] = [
+  {
+    label: 'Diagonali reattive',
+    setup: 'Riorganizza la stazione su 2 diagonali con 4-6 cinesini target e partenza centrale.',
+    execution: 'Lavora su partenze diagonali con arresto tecnico e rientro rapido in split-step.',
+    rotation: 'Alterna i ruoli ogni passaggio (chi esegue, chi chiama, chi prepara il target successivo).',
+    secondaryFocus: 'reattività su diagonali e gestione frenata'
+  },
+  {
+    label: 'Navetta multi-target',
+    setup: 'Imposta 3 target progressivi (corto-medio-lungo) con distanze crescenti e reset in partenza.',
+    execution: 'Ogni ripetizione cambia target e distanza, mantenendo controllo postura e cambio ritmo.',
+    rotation: 'Rotazione a navetta: atleta in lavoro, atleta pronto, atleta in recupero attivo.',
+    secondaryFocus: 'accelerazione + cambio ritmo'
+  },
+  {
+    label: 'Porte laterali',
+    setup: 'Crea 3 porte laterali con cinesini e una corsia centrale di rientro.',
+    execution: 'Al segnale, uscita rapida sulla porta chiamata, tocco riferimento e rientro centrale.',
+    rotation: 'Lavoro a coppie: un atleta esegue e il partner gestisce la chiamata della porta.',
+    secondaryFocus: 'spostamenti laterali e lettura del segnale'
+  },
+  {
+    label: 'Circuito stella',
+    setup: 'Disponi i cinesini a stella (5 direzioni) con cono centrale come hub di partenza.',
+    execution: 'Sequenze multi-direzione con ritorno al centro dopo ogni target e ripartenza immediata.',
+    rotation: 'Mini-gruppi: 1 atleta in esecuzione, il successivo in pre-attivazione, cambio continuo.',
+    secondaryFocus: 'rapidità multi-direzionale'
+  }
+];
+
+const WARMUP_VARIANT_NOTE =
+  'Variante giorno: cambia regole e target ogni 45-60s per evitare ripetizioni rispetto alle altre sessioni della scheda.';
+
+/**
+ * Normalizza il testo in chiave comparabile:
+ * - converte in minuscolo
+ * - usa NFD + rimozione diacritici
+ * - mantiene solo caratteri alfanumerici
+ */
+const normalizeTextKey = (value: string | undefined): string =>
+  (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const enforceCrossSessionVariety = (data: WeeklyPlan) => {
+  const sessions = data.sessions || [];
+  const seenWarmups = new Set<string>();
+  const seenDrills = new Map<string, number>();
+
+  sessions.forEach((session, sessionIndex) => {
+    if (session.warmup) {
+      const warmupKey = normalizeTextKey(session.warmup.title);
+      if (warmupKey && seenWarmups.has(warmupKey)) {
+        session.warmup.title = `${session.warmup.title} - variante giorno ${sessionIndex + 1}`;
+        session.warmup.execution = appendIfMissing(
+          session.warmup.execution,
+          WARMUP_VARIANT_NOTE,
+          'variante giorno'
+        );
+      }
+      if (warmupKey) seenWarmups.add(warmupKey);
+    }
+
+    session.mainBlock = (session.mainBlock || []).map((drill, drillIndex) => {
+      const key = normalizeTextKey(drill.name);
+      if (!key) return drill;
+      const firstSeenSession = seenDrills.get(key);
+      if (firstSeenSession === undefined) {
+        seenDrills.set(key, sessionIndex);
+        return drill;
+      }
+
+      // Deterministico: cambia variante in base a giorno + posizione drill, evitando copie tra sessioni.
+      const dimension = VARIETY_DIMENSIONS[(sessionIndex + drillIndex) % VARIETY_DIMENSIONS.length];
+      return {
+        ...drill,
+        name: `${drill.name} - variante ${dimension.label}`,
+        setup: appendIfMissing(drill.setup, dimension.setup, 'variante'),
+        execution: appendIfMissing(drill.execution, dimension.execution, 'variante'),
+        rotation: appendIfMissing(drill.rotation, dimension.rotation, 'variante'),
+        notes: addUniqueNote(
+          drill.notes,
+          `Variante rispetto ad altri giorni: focus secondario su ${dimension.secondaryFocus}.`
+        )
+      };
+    });
+  });
+};
+
 const getApiKeyOrThrow = () => {
   let apiKey = getStoredApiKey();
   if (!apiKey) {
@@ -562,6 +708,19 @@ VINCOLI COGNITIVI, BLAZEPOD E BUZZONI (OBBLIGATORI):
 - Se Uso Buzzoni = SÌ: almeno un drill deve usare esplicitamente sistema/app Buzzoni in modo coerente (chiamate, segnali, stimoli, reazione, coordinazione, componente cognitiva/reattiva se utile).
 - Se sono selezionati più vincoli, anche lo stesso drill può coprirne più di uno, ma il riferimento a BlazePod e/o Buzzoni deve essere esplicito.
 
+DIVERSIFICAZIONE FORTE TRA I GIORNI (OBBLIGATORIA):
+- Le sessioni della stessa scheda devono essere chiaramente diverse tra loro: evita copie/incolla o semplici rinomini.
+- NON ripetere tra giorni diversi: stesso nome warm-up, stesso gioco warm-up, stesso nome drill del blocco principale, stessa sequenza identica di stazioni.
+- Differenzia esplicitamente ogni giorno su questi assi:
+  1) tipologia gioco warm-up o attivazione
+  2) pattern motori prevalenti (es. laterale, diagonale, accelerazione-frenata, retro/avanti)
+  3) attrezzi o riferimenti usati
+  4) organizzazione stazioni (corridoi, stella, navetta, circuito, porte)
+  5) focus secondario tecnico-atletico
+  6) dinamica a coppie/gruppo (inseguimento, staffetta, alternanza ruoli, mini-sfida)
+- Se per coerenza del focus riusi lo stesso tipo di lavoro, crea una VARIANTE concreta con setup/esecuzione/rotazione diversi e specifica chiaramente la differenza operativa.
+- Warm-up tipo "Gioco": privilegia divertimento, attivazione, semplicità organizzativa e specificità tennis/padel. In warm-up NON è obbligatorio usare BlazePod/Buzzoni/cognitiva.
+
 VINCOLO FORMATO DURATA ESERCIZI (IMPORTANTISSIMO):
 - In "durationOrReps" NON devi mai scrivere minuti tipo: "10 min", "8 minuti", "5'".
 - "durationOrReps" deve essere SEMPRE nel formato:
@@ -620,7 +779,7 @@ Rispondi SOLO con JSON valido secondo lo schema.
         responseMimeType: "application/json",
         responseSchema: trainingPlanSchema,
         systemInstruction:
-          "Sei un coach d'élite. Rispondi con JSON valido. Rispetta i vincoli di durata del blocco principale (50 o 55 min), warm-up opzionale extra da 10 min, niente cooldown/final game/cesto. durationOrReps DEVE essere nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere setup, execution, rotation e totalDurationEstimate (~N min). Se richiesti parte cognitiva, BlazePod o Buzzoni, almeno un drill deve rispettare esplicitamente tali vincoli. Se la modalità è 'Con attrezzi', almeno il 70% dei drill deve usare elastici, palle mediche, bastoni o step."
+        "Sei un coach d'élite. Rispondi con JSON valido. Rispetta i vincoli di durata del blocco principale (50 o 55 min), warm-up opzionale extra da 10 min, niente cooldown/final game/cesto. durationOrReps DEVE essere nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere setup, execution, rotation e totalDurationEstimate (~N min). Se richiesti parte cognitiva, BlazePod o Buzzoni, almeno un drill deve rispettare esplicitamente tali vincoli. Se la modalità è 'Con attrezzi', almeno il 70% dei drill deve usare elastici, palle mediche, bastoni o step. Le sessioni della stessa scheda devono essere realmente diverse: no warm-up duplicati, no mainBlock fotocopia, no rinomina superficiale."
       }
     });
 
@@ -632,11 +791,10 @@ Rispondi SOLO con JSON valido secondo lo schema.
     // Client-side hard guards for consistency
     data.location = prefs.location;
     data.equipmentMode = prefs.equipmentMode;
-    const warmup = buildWarmupBlock(prefs);
-    data.sessions = (data.sessions || []).map((s) => ({
+    data.sessions = (data.sessions || []).map((s, index) => ({
       ...s,
       totalDuration: normalizeMainDuration(s.totalDuration),
-      warmup,
+      warmup: buildWarmupBlock(prefs, index),
       location: prefs.location,
       mainBlock: (s.mainBlock || []).map((d) => ({
         ...d,
@@ -648,6 +806,7 @@ Rispondi SOLO con JSON valido secondo lo schema.
       ...session,
       mainBlock: (session.mainBlock || []).map((drill) => enrichOperationalFields(drill, prefs))
     }));
+    enforceCrossSessionVariety(data);
 
     return data;
   } catch (error) {
