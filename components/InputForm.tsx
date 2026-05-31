@@ -11,7 +11,7 @@ import {
   EquipmentMode
 } from '../types';
 import { Button } from './Button';
-import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2, Users, Radio, MapPin } from 'lucide-react';
+import { Dumbbell, Calendar, Zap, CircleDot, Trophy, Brain, Flame, Gamepad2, Users, Radio, MapPin, Smartphone } from 'lucide-react';
 
 interface InputFormProps {
   onSubmit: (prefs: UserPreferences) => void;
@@ -34,6 +34,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
   const [includeWarmup, setIncludeWarmup] = useState(false);
   const [includeCognitive, setIncludeCognitive] = useState(false);
   const [useBlazepod, setUseBlazepod] = useState(false);
+  const [useBuzzoni, setUseBuzzoni] = useState(false);
   const [warmupType, setWarmupType] = useState<WarmupType>('Normale');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,6 +50,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
       includeWarmup,
       includeCognitive,
       useBlazepod,
+      useBuzzoni,
       warmupType,
       location
     });
@@ -314,6 +316,22 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
                 <Radio size={20} className={useBlazepod ? 'text-cyan-600' : 'text-gray-400'} />
               </div>
               <p className="text-xs text-gray-500 leading-tight">Usa luci di reazione per velocità e riflessi.</p>
+            </div>
+
+            {/* Buzzoni Toggle */}
+            <div
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                useBuzzoni ? 'border-fuchsia-500 bg-fuchsia-50' : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+              }`}
+              onClick={() => setUseBuzzoni(!useBuzzoni)}
+            >
+              <div className="flex justify-between items-center mb-1">
+                <span className={`font-semibold text-sm ${useBuzzoni ? 'text-fuchsia-700' : 'text-gray-600'}`}>
+                  Sistema Buzzoni
+                </span>
+                <Smartphone size={20} className={useBuzzoni ? 'text-fuchsia-600' : 'text-gray-400'} />
+              </div>
+              <p className="text-xs text-gray-500 leading-tight">Include chiamate, segnali e reazioni guidate dall'app Buzzoni.</p>
             </div>
 
             {includeWarmup && (
