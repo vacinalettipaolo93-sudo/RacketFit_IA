@@ -331,7 +331,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => 
                 </span>
                 <Smartphone size={20} className={useBuzzoni ? 'text-fuchsia-600' : 'text-gray-400'} />
               </div>
-              <p className="text-xs text-gray-500 leading-tight">Include chiamate, segnali e reazioni guidate dall&apos;app Buzzoni.</p>
+              <p className="text-xs text-gray-500 leading-tight">Include chiamate, segnali e reazioni guidate dall'app Buzzoni.</p>
             </div>
 
             {includeWarmup && (

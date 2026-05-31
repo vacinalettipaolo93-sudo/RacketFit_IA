@@ -35,7 +35,7 @@ const InstructionBlock: React.FC<InstructionBlockProps> = ({ title, icon, conten
       </p>
       <ul className={`space-y-1 text-xs leading-relaxed ${textTone}`}>
         {steps.map((step, index) => (
-          <li key={`${title}-${index}`} className="flex gap-2">
+          <li key={`${title}-${index}-${step.slice(0, 24)}`} className="flex gap-2">
             <span className="font-bold shrink-0">{index + 1}.</span>
             <span>{step}</span>
           </li>
