@@ -92,6 +92,10 @@ export interface Drill {
   equipment?: string;
   // NEW: istruzioni di setup pratico (posizione cinesini, attrezzi, punto di partenza, distanze)
   setup?: string;
+  // NEW: esecuzione pratica sul campo, passo per passo
+  execution?: string;
+  // NEW: rotazione atleti / cambio turno nella stazione
+  rotation?: string;
   // NEW: durata totale stimata dell'esercizio incluso recupero (es: "~5 min", "~7 min")
   totalDurationEstimate?: string;
 }
@@ -157,6 +161,7 @@ export interface UserPreferences {
   includeWarmup: boolean;
   includeCognitive: boolean;
   useBlazepod: boolean;
+  useBuzzoni: boolean;
   warmupType: WarmupType;
 
   location: SessionLocation;

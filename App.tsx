@@ -218,6 +218,7 @@ const App: React.FC = () => {
         includeWarmup: false,
         includeCognitive: false,
         useBlazepod: false,
+        useBuzzoni: false,
         warmupType: 'Normale',
         groupSize: GroupSize.ONE,
         location: savedPlan.location ?? 'Campo'

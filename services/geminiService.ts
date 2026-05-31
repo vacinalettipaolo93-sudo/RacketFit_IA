@@ -71,7 +71,15 @@ const trainingPlanSchema: Schema = {
                 },
                 setup: {
                   type: Type.STRING,
-                  description: "Istruzioni pratiche di setup: posizione cinesini/coni (distanze), dove mettere step/elastico/palla medica/bastone, punto di partenza, organizzazione rotazione atleti."
+                  description: "Setup materiali e posizionamento: posizione cinesini/coni (con distanze), dove mettere step/elastico/palla medica/bastone/BlazePod/Buzzoni, punto di partenza atleta."
+                },
+                execution: {
+                  type: Type.STRING,
+                  description: "Esecuzione pratica passo per passo: cosa fa l'atleta, quando parte, quali segnali segue, come chiude la ripetizione."
+                },
+                rotation: {
+                  type: Type.STRING,
+                  description: "Rotazione atleti: chi parte, chi aspetta, quando si cambia, recupero tra turni, come scorre la fila o la coppia."
                 },
                 totalDurationEstimate: {
                   type: Type.STRING,
@@ -223,7 +231,124 @@ const isBlazepodDrill = (drill: Drill): boolean => {
   return [drill.name, drill.description, drill.notes, drill.setup, drill.equipment].some((field) => includesAnyKeyword(field, blazepodKeywords));
 };
 
-const ensureCognitiveAndBlazepodCoverage = (data: WeeklyPlan, prefs: UserPreferences) => {
+const isBuzzoniDrill = (drill: Drill): boolean => {
+  const buzzoniKeywords = ['buzzoni', 'app buzzoni', 'sistema buzzoni'];
+  return [drill.name, drill.description, drill.notes, drill.setup, drill.execution, drill.equipment].some((field) =>
+    includesAnyKeyword(field, buzzoniKeywords)
+  );
+};
+
+const appendSentenceIfMissing = (value: string | undefined, addition: string, probes: string[]): string => {
+  if (includesAnyKeyword(value, probes)) return value || '';
+  return value ? `${value} ${addition}` : addition;
+};
+
+const getEquipmentPlacementHints = (equipment: string | undefined): string[] => {
+  if (!equipment) return [];
+  const normalized = equipment.toLowerCase();
+  const hints: string[] = [];
+
+  if (normalized.includes('step')) {
+    hints.push('Posiziona lo step al centro o alla fine della corsia, stabile e con spazio libero di almeno 1 metro su ogni lato.');
+  }
+  if (normalized.includes('elast')) {
+    hints.push("Ancora l'elastico a un supporto fisso o fallo tenere al compagno all'altezza dei fianchi, con tensione già attiva alla partenza.");
+  }
+  if (normalized.includes('palla medica')) {
+    hints.push("Appoggia la palla medica accanto al punto di partenza o nel punto di arrivo, così da prenderla senza interrompere il ritmo.");
+  }
+  if (normalized.includes('bastone')) {
+    hints.push('Metti il bastone a terra come riferimento di appoggio o in mano all’atleta, lasciando libero il corridoio di corsa.');
+  }
+  if (normalized.includes('blazepod') || normalized.includes('blaze pod')) {
+    hints.push('Posiziona i BlazePod sui riferimenti da toccare o cambiare direzione, ben visibili e distanziati in modo coerente con la corsia.');
+  }
+  if (normalized.includes('buzzoni')) {
+    hints.push("Posiziona smartphone o tablet con app Buzzoni a lato stazione, visibile o ben udibile dall'atleta, e associa le chiamate ai riferimenti a terra.");
+  }
+
+  return hints;
+};
+
+const buildRotationFallback = (prefs: UserPreferences, drill: Drill): string => {
+  if (prefs.groupSize === '1 Persona') {
+    return 'Atleta singolo: completa tutte le ripetizioni previste, recupera il tempo indicato tra le serie e riparte dalla stessa posizione iniziale.';
+  }
+
+  if (prefs.groupSize === '2 Persone' || drill.pairWork) {
+    return 'A coppie: 1 atleta lavora e 1 osserva/assiste; cambio ruolo a ogni ripetizione o a fine serie, poi si riparte dal punto di partenza.';
+  }
+
+  if (prefs.groupSize === '3 Persone' || prefs.groupSize === '4 Persone') {
+    return 'Mini-gruppo: 1 atleta esegue, il successivo si prepara sulla linea di partenza e il terzo recupera; si ruota in ordine appena termina il passaggio.';
+  }
+
+  return 'Circuito: 1 atleta per volta nella stazione, gli altri restano in fila corta dietro il punto di partenza; al termine del passaggio si scala di una posizione e si cambia stazione al segnale del coach.';
+};
+
+const enrichOperationalFields = (drill: Drill, prefs: UserPreferences): Drill => {
+  const equipmentHints = getEquipmentPlacementHints(drill.equipment).reduce(
+    (current, hint) => appendSentenceIfMissing(current, hint, hint.split(' ').slice(0, 3)),
+    drill.setup || ''
+  );
+
+  let setup = equipmentHints || drill.setup || '';
+  setup = appendSentenceIfMissing(
+    setup,
+    'Delimita la stazione con almeno 4 cinesini o riferimenti chiari, indicando partenza, cambio direzione e arrivo.',
+    ['cinesin', 'coni', 'riferiment']
+  );
+  setup = appendSentenceIfMissing(
+    setup,
+    'Punto di partenza: atleta dietro al primo riferimento, in posizione atletica e pronto al segnale.',
+    ['partenza', 'pronto al segnale', 'dietro al primo']
+  );
+
+  let execution = drill.execution || drill.description || '';
+  execution = appendSentenceIfMissing(
+    execution,
+    'Al via del coach o del segnale previsto, l’atleta esegue il percorso completo, chiude la ripetizione con controllo e torna subito pronto per quella successiva.',
+    ['al via', 'ripetizione', 'segnale']
+  );
+
+  if (prefs.includeCognitive && isCognitiveDrill(drill)) {
+    execution = appendSentenceIfMissing(
+      execution,
+      'La direzione o il target viene deciso all’ultimo momento tramite chiamata, colore o segnale, così da allenare lettura e reazione.',
+      ['chiamata', 'colore', 'direzione', 'target']
+    );
+  }
+
+  if (isBlazepodDrill(drill)) {
+    execution = appendSentenceIfMissing(
+      execution,
+      'L’atleta parte solo sul trigger luminoso corretto e chiude la ripetizione toccando o superando il pod indicato.',
+      ['trigger luminoso', 'pod indicato', 'blazepod']
+    );
+  }
+
+  if (isBuzzoniDrill(drill)) {
+    execution = appendSentenceIfMissing(
+      execution,
+      "Usa l'app o il sistema Buzzoni per ricevere chiamate casuali e reagire subito con il movimento corretto richiesto dalla stazione.",
+      ['buzzoni', 'chiamate casuali', 'sistema']
+    );
+  }
+
+  let rotation = drill.rotation || '';
+  if (!rotation.trim()) {
+    rotation = buildRotationFallback(prefs, drill);
+  }
+
+  return {
+    ...drill,
+    setup,
+    execution,
+    rotation
+  };
+};
+
+const ensureSelectedCoverage = (data: WeeklyPlan, prefs: UserPreferences) => {
   const sessions = data.sessions || [];
   if (!sessions.length) return;
 
@@ -238,6 +363,11 @@ const ensureCognitiveAndBlazepodCoverage = (data: WeeklyPlan, prefs: UserPrefere
       'Inserisci chiamate casuali di colori/segnali per decision making e reazione visiva.',
       'decision making'
     );
+    firstDrill.execution = appendIfMissing(
+      firstDrill.execution,
+      'Il coach richiama colore, numero o direzione all’ultimo momento e l’atleta deve reagire subito senza anticipare.',
+      'colore'
+    );
     firstDrill.notes = addUniqueNote(firstDrill.notes, 'Componente cognitiva obbligatoria: risposta a stimoli visivi/verbali.');
   }
 
@@ -250,7 +380,44 @@ const ensureCognitiveAndBlazepodCoverage = (data: WeeklyPlan, prefs: UserPrefere
       'Usa BlazePod per trigger luminosi e cambi direzione reattivi.',
       'blazepod'
     );
+    firstDrill.setup = appendIfMissing(
+      firstDrill.setup,
+      'Posiziona i BlazePod sui punti di cambio direzione o tocco, ben visibili rispetto al punto di partenza.',
+      'blazepod'
+    );
+    firstDrill.execution = appendIfMissing(
+      firstDrill.execution,
+      'Parti quando si accende il pod corretto, raggiungi il riferimento indicato e rientra rapidamente in controllo.',
+      'pod corretto'
+    );
     firstDrill.notes = addUniqueNote(firstDrill.notes, 'Uso BlazePod obbligatorio: reagire a luci e segnali colore.');
+  }
+
+  if (prefs.useBuzzoni && !allDrills.some(isBuzzoniDrill)) {
+    firstDrill.equipment = firstDrill.equipment
+      ? `${firstDrill.equipment}, Sistema Buzzoni`
+      : 'Sistema Buzzoni';
+    firstDrill.description = appendIfMissing(
+      firstDrill.description,
+      'Usa il sistema/app Buzzoni con chiamate casuali di segnale, reazione e coordinazione specifica.',
+      'buzzoni'
+    );
+    firstDrill.setup = appendIfMissing(
+      firstDrill.setup,
+      "Posiziona smartphone o tablet con app Buzzoni a lato stazione e collega le chiamate dell'app ai riferimenti da raggiungere.",
+      'buzzoni'
+    );
+    firstDrill.execution = appendIfMissing(
+      firstDrill.execution,
+      "L'atleta parte solo dopo la chiamata dell'app Buzzoni e reagisce al segnale corretto con spostamento, tocco o cambio direzione richiesto.",
+      'app buzzoni'
+    );
+    firstDrill.rotation = appendIfMissing(
+      firstDrill.rotation,
+      'Chi è in attesa resta dietro la linea di partenza; al termine del passaggio entra il compagno successivo mantenendo la stessa logica di chiamata Buzzoni.',
+      'buzzoni'
+    );
+    firstDrill.notes = addUniqueNote(firstDrill.notes, 'Uso Buzzoni obbligatorio: reagire a chiamate/segnali del sistema.');
   }
 };
 
@@ -297,6 +464,7 @@ SCELTE UTENTE:
 - Tipo riscaldamento: ${prefs.warmupType}
 - Parte cognitiva: ${prefs.includeCognitive ? 'SÌ' : 'NO'}
 - Uso BlazePod: ${prefs.useBlazepod ? 'SÌ' : 'NO'}
+- Uso Buzzoni: ${prefs.useBuzzoni ? 'SÌ' : 'NO'}
 
 VINCOLI OBBLIGATORI PER OGNI SESSIONE:
 - DURATA BLOCCO PRINCIPALE: 50 oppure 55 minuti NETTI (scrivi "50 min" o "55 min" in totalDuration).
@@ -309,10 +477,11 @@ VINCOLI OBBLIGATORI PER OGNI SESSIONE:
 - Lingua: ITALIANO, tecnico ma semplice.
 ${equipmentRules}
 
-VINCOLI COGNITIVI E BLAZEPOD (OBBLIGATORI):
+VINCOLI COGNITIVI, BLAZEPOD E BUZZONI (OBBLIGATORI):
 - Se Parte cognitiva = SÌ: almeno un drill deve includere esplicitamente componenti cognitive/reattive (decision making, stimoli visivi, chiamate, colori, segnali, reazione).
 - Se Uso BlazePod = SÌ: almeno un drill deve usare esplicitamente BlazePod nelle istruzioni operative o nel campo equipment.
-- Se entrambe sono SÌ, anche lo stesso drill può coprire entrambi i vincoli.
+- Se Uso Buzzoni = SÌ: almeno un drill deve usare esplicitamente sistema/app Buzzoni in modo coerente (chiamate, segnali, stimoli, reazione, coordinazione, componente cognitiva/reattiva se utile).
+- Se sono selezionati più vincoli, anche lo stesso drill può coprirne più di uno, ma il riferimento a BlazePod e/o Buzzoni deve essere esplicito.
 
 VINCOLO FORMATO DURATA ESERCIZI (IMPORTANTISSIMO):
 - In "durationOrReps" NON devi mai scrivere minuti tipo: "10 min", "8 minuti", "5'".
@@ -331,14 +500,18 @@ CAMPO "totalDurationEstimate" (OBBLIGATORIO per ogni esercizio):
 - Esempio: 3 serie x 6 rep x 15s + recupero 45s = (3×6×15) + (3×45) = 270+135 = 405s ≈ "~7 min"
 - Arrotonda al minuto più vicino, usa il formato "~N min".
 
-CAMPO "setup" (OBBLIGATORIO per ogni esercizio):
-- Descrivi come preparare praticamente l'esercizio sul campo.
+CAMPI OPERATIVI DELLA STAZIONE (OBBLIGATORI per ogni esercizio):
+- "setup": descrivi come preparare praticamente l'esercizio sul campo.
 - Includi SEMPRE:
   * Numero e disposizione dei cinesini/coni (es: "4 cinesini in linea a 1.5m di distanza l'uno dall'altro")
   * Punto di partenza dell'atleta (es: "Atleta in piedi dietro il primo cinesino")
-  * Posizione dell'attrezzo se presente (es: "Step posizionato al termine della linea", "Elastico ancorato al palo di rete all'altezza dei fianchi")
-  * Organizzazione della rotazione se il gruppo è numeroso (es: "File di 2-3 atleti, si riparte appena il primo ha finito")
-- Usa frasi brevi e pratiche, leggibili da un coach sul campo.
+  * Posizione dell'attrezzo se presente (es: "Step posizionato al termine della linea", "Elastico ancorato al palo di rete all'altezza dei fianchi", "BlazePod sui 4 angoli", "tablet Buzzoni a lato stazione")
+- "execution": spiega come si svolge l'esercizio, passo per passo, in modo operativo e immediatamente eseguibile sul campo.
+  * Spiega cosa succede al via, cosa deve fare l'atleta, quale riferimento deve raggiungere, come chiude la ripetizione.
+  * Se presenti BlazePod o Buzzoni, spiega esattamente come entra in gioco il segnale/stimolo/chiamata.
+- "rotation": spiega come ruotano gli atleti nella stazione.
+  * Chi parte, chi aspetta, quando si cambia, come si organizza la fila o la coppia, come si recupera tra i turni.
+- Usa frasi brevi, pratiche e leggibili da un coach sul campo. Evita descrizioni vaghe.
 
 REGOLE ORGANIZZAZIONE IN BASE AL GRUPPO:
 - 1 Persona: lavori individuali con vincoli chiari (tempi, distanze, target).
@@ -368,7 +541,7 @@ Rispondi SOLO con JSON valido secondo lo schema.
         responseMimeType: "application/json",
         responseSchema: trainingPlanSchema,
         systemInstruction:
-          "Sei un coach d'élite. Rispondi con JSON valido. Rispetta i vincoli di durata del blocco principale (50 o 55 min), warm-up opzionale extra da 10 min, niente cooldown/final game/cesto. durationOrReps DEVE essere nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere setup e totalDurationEstimate (~N min). Se richiesti parte cognitiva o BlazePod, almeno un drill deve rispettare esplicitamente tali vincoli. Se la modalità è 'Con attrezzi', almeno il 70% dei drill deve usare elastici, palle mediche, bastoni o step."
+          "Sei un coach d'élite. Rispondi con JSON valido. Rispetta i vincoli di durata del blocco principale (50 o 55 min), warm-up opzionale extra da 10 min, niente cooldown/final game/cesto. durationOrReps DEVE essere nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere setup, execution, rotation e totalDurationEstimate (~N min). Se richiesti parte cognitiva, BlazePod o Buzzoni, almeno un drill deve rispettare esplicitamente tali vincoli. Se la modalità è 'Con attrezzi', almeno il 70% dei drill deve usare elastici, palle mediche, bastoni o step."
       }
     });
 
@@ -391,7 +564,11 @@ Rispondi SOLO con JSON valido secondo lo schema.
         location: prefs.location
       }))
     }));
-    ensureCognitiveAndBlazepodCoverage(data, prefs);
+    ensureSelectedCoverage(data, prefs);
+    data.sessions = (data.sessions || []).map((session) => ({
+      ...session,
+      mainBlock: (session.mainBlock || []).map((drill) => enrichOperationalFields(drill, prefs))
+    }));
 
     return data;
   } catch (error) {

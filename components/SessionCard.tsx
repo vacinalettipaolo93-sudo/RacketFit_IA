@@ -1,11 +1,49 @@
 import React, { useState } from 'react';
 import { TrainingSession } from '../types';
-import { ChevronDown, ChevronUp, Clock, Activity, MapPin, Users, Dumbbell, Settings, Flame, Gamepad2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Activity, MapPin, Users, Dumbbell, Settings, Flame, Gamepad2, PlayCircle, Repeat } from 'lucide-react';
 
 interface SessionCardProps {
   session: TrainingSession;
   index: number;
 }
+
+const toInstructionSteps = (value?: string): string[] => {
+  if (!value) return [];
+
+  return value
+    .split(/\n+|(?<=[.!?])\s+/)
+    .map((part) => part.replace(/^[\-\d.)\s]+/, '').trim())
+    .filter(Boolean);
+};
+
+interface InstructionBlockProps {
+  title: string;
+  icon: React.ReactNode;
+  content?: string;
+  tone: string;
+  textTone: string;
+}
+
+const InstructionBlock: React.FC<InstructionBlockProps> = ({ title, icon, content, tone, textTone }) => {
+  const steps = toInstructionSteps(content);
+  if (!steps.length) return null;
+
+  return (
+    <div className={`rounded-lg border p-3 ${tone}`}>
+      <p className={`text-xs font-semibold flex items-center gap-1 mb-2 ${textTone}`}>
+        {icon} {title}
+      </p>
+      <ul className={`space-y-1 text-xs leading-relaxed ${textTone}`}>
+        {steps.map((step, index) => (
+          <li key={`${title}-${index}`} className="flex gap-2">
+            <span className="font-bold shrink-0">{index + 1}.</span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -99,19 +137,33 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index }) => {
 
                   <p className="text-gray-600 text-sm mb-3 leading-relaxed">{drill.description}</p>
 
-                  {/* Setup instructions */}
-                  {drill.setup && (
-                    <div className="mb-3 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                      <p className="text-xs font-semibold text-blue-700 flex items-center gap-1 mb-1">
-                        <Settings size={11} /> Setup pratico
-                      </p>
-                      <p className="text-xs text-blue-800 leading-relaxed">{drill.setup}</p>
-                    </div>
-                  )}
+                  <div className="grid gap-3 md:grid-cols-3 mb-3">
+                   <InstructionBlock
+                     title="Setup materiali / posizionamento"
+                     icon={<Settings size={11} />}
+                     content={drill.setup}
+                     tone="bg-blue-50 border-blue-100"
+                     textTone="text-blue-800"
+                   />
+                   <InstructionBlock
+                     title="Esecuzione pratica"
+                     icon={<PlayCircle size={11} />}
+                     content={drill.execution ?? drill.description}
+                     tone="bg-emerald-50 border-emerald-100"
+                     textTone="text-emerald-800"
+                   />
+                   <InstructionBlock
+                     title="Rotazione atleti"
+                     icon={<Repeat size={11} />}
+                     content={drill.rotation}
+                     tone="bg-violet-50 border-violet-100"
+                     textTone="text-violet-800"
+                   />
+                  </div>
 
                   <div className="flex flex-wrap gap-2 mt-2">
-                    <span className="text-xs font-semibold text-tennis-accent bg-teal-50 px-2 py-1 rounded">
-                      Recupero: {drill.rest}
+                   <span className="text-xs font-semibold text-tennis-accent bg-teal-50 px-2 py-1 rounded">
+                     Recupero: {drill.rest}
                     </span>
 
                     {drill.totalDurationEstimate && (
