@@ -227,7 +227,7 @@ const isCognitiveDrill = (drill: Drill): boolean => {
 };
 
 const isBlazepodDrill = (drill: Drill): boolean => {
-  const blazepodKeywords = ['blazepod', 'blaze pod', 'luci', 'pod'];
+  const blazepodKeywords = ['blazepod', 'blaze pod', 'pod'];
   return [drill.name, drill.description, drill.notes, drill.setup, drill.equipment].some((field) => includesAnyKeyword(field, blazepodKeywords));
 };
 
@@ -287,10 +287,12 @@ const buildRotationFallback = (prefs: UserPreferences, drill: Drill): string => 
 };
 
 const enrichOperationalFields = (drill: Drill, prefs: UserPreferences): Drill => {
-  const equipmentHints = getEquipmentPlacementHints(drill.equipment).reduce(
-    (current, hint) => appendSentenceIfMissing(current, hint, hint.split(' ').slice(0, 3)),
-    drill.setup || ''
-  );
+  const equipmentHints = getEquipmentPlacementHints(drill.equipment).reduce((current, hint) => {
+    if (current.toLowerCase().includes(hint.toLowerCase())) {
+      return current;
+    }
+    return current ? `${current} ${hint}` : hint;
+  }, drill.setup || '');
 
   let setup = equipmentHints || drill.setup || '';
   setup = appendSentenceIfMissing(
