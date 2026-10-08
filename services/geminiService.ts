@@ -1,25 +1,38 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan, EquipmentMode, Drill } from "../types";
+import { GoogleGenAI, Type } from "@google/genai";
+import type { Schema } from "@google/genai";
+import { EquipmentMode } from "../types.ts";
+import type { UserPreferences, WeeklyPlan, LessonPreferences, LessonPlan, Drill } from "../types.ts";
+import { DEFAULT_MODELS, GenerationError, normalizeLessonPlan, normalizeTrainingPlan, requestAIJson } from './aiResponse.ts';
+import { buildLessonPrompt, lessonSummary } from './lessonPrompt.ts';
 
 // Helper functions for manual API Key management
 const STORAGE_KEY = 'gemini_api_key';
 
-export const getStoredApiKey = () => localStorage.getItem(STORAGE_KEY);
+export const getStoredApiKey = () => {
+  try { return localStorage.getItem(STORAGE_KEY)?.trim() || null; } catch { return null; }
+};
 export const saveApiKey = (key: string) => localStorage.setItem(STORAGE_KEY, key);
 export const removeApiKey = () => localStorage.removeItem(STORAGE_KEY);
 
 // Check if an Env key exists (Vite or Process)
-export const hasEnvApiKey = (): boolean => {
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env || {};
+const getEnvApiKey = (): string | undefined => {
+  const viteKey = env.VITE_GEMINI_API_KEY?.trim() || env.VITE_API_KEY?.trim();
+  if (viteKey) return viteKey;
   try {
-    // @ts-ignore
-    if (import.meta.env && import.meta.env.VITE_API_KEY) return true;
-  } catch (e) {}
+    return process.env.API_KEY?.trim() || undefined;
+  } catch { return undefined; }
+};
+export const hasEnvApiKey = (): boolean => Boolean(getEnvApiKey());
 
+const getModels = (): string[] => {
+  let model = env.VITE_GEMINI_MODEL?.trim();
+  let fallback = env.VITE_GEMINI_FALLBACK_MODEL?.trim();
   try {
-    if (process.env.API_KEY) return true;
-  } catch (e) {}
-
-  return false;
+    model ||= process.env.GEMINI_MODEL?.trim();
+    fallback ||= process.env.GEMINI_FALLBACK_MODEL?.trim();
+  } catch {}
+  return [model || DEFAULT_MODELS[0], fallback || DEFAULT_MODELS[1]];
 };
 
 // --- TRAINING PLAN SCHEMA (UPDATED: 50' netti, solo mainBlock, no warmup/cooldown) ---
@@ -48,7 +61,7 @@ const trainingPlanSchema: Schema = {
               setup: { type: Type.STRING },
               execution: { type: Type.STRING },
               rotation: { type: Type.STRING },
-              timePlan: { type: Type.STRING },
+              timePlan: { type: Type.STRING, description: "Intervalli contigui da 0 a 10: '0-2 min: ...; 2-5 min: ...; 5-8 min: ...; 8-10 min: ...'" },
               equipment: { type: Type.STRING },
               isExtra: { type: Type.BOOLEAN, description: "Must be true, warm-up is extra rispetto al blocco principale" }
             }
@@ -91,7 +104,7 @@ const trainingPlanSchema: Schema = {
                   description: "Durata totale stimata dell'esercizio incluso recupero tra le serie (es: '~5 min', '~7 min'). Calcola in secondi: (serie × rip × tempo_rep_sec) + (serie × recupero_sec), poi converti in minuti."
                 }
               },
-              required: ["name", "description", "durationOrReps", "rest"]
+              required: ["name", "description", "durationOrReps", "rest", "totalDurationEstimate"]
             }
           }
         },
@@ -102,7 +115,23 @@ const trainingPlanSchema: Schema = {
   required: ["weeklyGoal", "sessions", "advice", "location", "equipmentMode"]
 };
 
-// --- LESSON PLAN SCHEMA (UNCHANGED) ---
+const lessonDrillSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    name: { type: Type.STRING }, description: { type: Type.STRING },
+    durationOrReps: { type: Type.STRING }, rest: { type: Type.STRING },
+    notes: { type: Type.STRING }, equipment: { type: Type.STRING },
+    objective: { type: Type.STRING }, setup: { type: Type.STRING },
+    execution: { type: Type.STRING }, rotation: { type: Type.STRING },
+    coachRole: { type: Type.STRING }, commonErrors: { type: Type.STRING },
+    safety: { type: Type.STRING }, adaptations: { type: Type.STRING },
+    totalDurationEstimate: { type: Type.STRING },
+  },
+  required: ['name', 'description', 'durationOrReps', 'rest', 'objective', 'setup',
+    'execution', 'rotation', 'coachRole', 'commonErrors', 'safety', 'adaptations', 'totalDurationEstimate'],
+};
+
+// --- LESSON PLAN SCHEMA ---
 const lessonPlanSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -111,44 +140,32 @@ const lessonPlanSchema: Schema = {
     mode: { type: Type.STRING },
     level: { type: Type.STRING },
     duration: { type: Type.STRING },
+    timeBudget: {
+      type: Type.OBJECT,
+      properties: {
+        warmupMinutes: { type: Type.NUMBER },
+        finalGameMinutes: { type: Type.NUMBER },
+      },
+      required: ['warmupMinutes', 'finalGameMinutes'],
+    },
     warmup: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "Technical warmup exercises (minitennis, palleggio controllato)"
+      description: "Ogni attività inizia con 'Durata: N min.' e include obiettivo, setup, esecuzione, ruoli e sicurezza"
     },
     basketDrills: {
       type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          name: { type: Type.STRING },
-          description: { type: Type.STRING, description: "Detailed feeding instruction (cesto)" },
-          durationOrReps: { type: Type.STRING, description: "Balls per player or minutes" },
-          rest: { type: Type.STRING },
-          notes: { type: Type.STRING, description: "Technical correction focus" }
-        },
-        required: ["name", "description", "durationOrReps", "rest"]
-      },
+      items: lessonDrillSchema,
       description: "Exercises using the basket (cesto) for technical mechanics"
     },
     liveDrills: {
       type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          name: { type: Type.STRING },
-          description: { type: Type.STRING, description: "Live ball or situational drill" },
-          durationOrReps: { type: Type.STRING },
-          rest: { type: Type.STRING },
-          notes: { type: Type.STRING }
-        },
-        required: ["name", "description", "durationOrReps", "rest"]
-      },
+      items: lessonDrillSchema,
       description: "Cooperative or competitive drills with live ball"
     },
-    finalGame: { type: Type.STRING, description: "Description of the final game or points structure" }
+    finalGame: { type: Type.STRING, description: "Inizia con 'Durata: N min.' e descrivi setup, regole, punteggio, rotazioni e sicurezza" }
   },
-  required: ["title", "warmup", "basketDrills", "liveDrills", "finalGame"]
+  required: ["title", "warmup", "basketDrills", "liveDrills", "finalGame", "timeBudget"]
 };
 
 const getEquipmentRules = (prefs: UserPreferences): string => {
@@ -184,13 +201,6 @@ VINCOLI ATTREZZATURA (OBBLIGATORI):
 - Ogni drill deve essere realizzabile SOLO con gli strumenti consentiti.
 - Ogni esercizio DEVE avere un campo "setup" con istruzioni pratiche: dove posizionare i cinesini, punto di partenza, distanze.
 `;
-};
-
-const normalizeMainDuration = (value?: string): '50 min' | '55 min' => {
-  if (value && value !== '50 min' && value !== '55 min') {
-    console.warn(`Unexpected totalDuration "${value}", fallback a "50 min".`);
-  }
-  return value === '55 min' ? '55 min' : '50 min';
 };
 
 type WarmupTemplate = {
@@ -647,26 +657,14 @@ const enforceCrossSessionVariety = (data: WeeklyPlan) => {
 };
 
 const getApiKeyOrThrow = () => {
-  let apiKey = getStoredApiKey();
-  if (!apiKey) {
-    try {
-      // @ts-ignore
-      apiKey = import.meta.env.VITE_API_KEY;
-    } catch (e) {}
-  }
-  if (!apiKey) {
-    try {
-      apiKey = process.env.API_KEY;
-    } catch (e) {}
-  }
-  if (!apiKey) throw new Error("API_KEY_MISSING");
+  const apiKey = getStoredApiKey() || getEnvApiKey();
+  if (!apiKey) throw new GenerationError('API_KEY_MISSING', 'Chiave API mancante. Configurala nelle impostazioni e riprova.');
   return apiKey;
 };
 
 export const generateTrainingPlan = async (prefs: UserPreferences): Promise<WeeklyPlan> => {
   const apiKey = getApiKeyOrThrow();
   const genAI = new GoogleGenAI({ apiKey: apiKey });
-  const model = "gemini-3-flash-preview";
   const equipmentRules = getEquipmentRules(prefs);
 
   const prompt = `
@@ -737,6 +735,8 @@ CAMPO "totalDurationEstimate" (OBBLIGATORIO per ogni esercizio):
 - Formula: (N_serie × N_rip × tempo_per_rep_in_sec) + (N_serie × recupero_in_sec) = totale in secondi → converti in minuti.
 - Esempio: 3 serie x 6 rep x 15s + recupero 45s = (3×6×15) + (3×45) = 270+135 = 405s ≈ "~7 min"
 - Arrotonda al minuto più vicino, usa il formato "~N min".
+- La somma dei totalDurationEstimate di tutte le stazioni, inclusi recuperi e cambi,
+  deve corrispondere ai 50/55 minuti del blocco principale; non basta scrivere l'etichetta.
 
 CAMPI OPERATIVI DELLA STAZIONE (OBBLIGATORI per ogni esercizio):
 - "setup": descrivi come preparare praticamente l'esercizio sul campo.
@@ -771,101 +771,55 @@ OUTPUT:
 Rispondi SOLO con JSON valido secondo lo schema.
 `;
 
-  try {
-    const response = await genAI.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: trainingPlanSchema,
-        systemInstruction:
-        "Sei un coach d'élite. Rispondi con JSON valido. Rispetta i vincoli di durata del blocco principale (50 o 55 min), warm-up opzionale extra da 10 min, niente cooldown/final game/cesto. durationOrReps DEVE essere nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere setup, execution, rotation e totalDurationEstimate (~N min). Se richiesti parte cognitiva, BlazePod o Buzzoni, almeno un drill deve rispettare esplicitamente tali vincoli. Se la modalità è 'Con attrezzi', almeno il 70% dei drill deve usare elastici, palle mediche, bastoni o step. Le sessioni della stessa scheda devono essere realmente diverse: no warm-up duplicati, no mainBlock fotocopia, no rinomina superficiale."
-      }
-    });
+  const raw = await requestAIJson((params) => genAI.models.generateContent(params), {
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: trainingPlanSchema,
+      maxOutputTokens: 16384,
+      systemInstruction:
+      "Sei un coach d'élite. Rispondi con JSON valido. Rispetta i vincoli di durata del blocco principale (50 o 55 min), warm-up opzionale extra da 10 min, niente cooldown/final game/cesto. durationOrReps DEVE essere nel formato 'N serie x N ripetizioni x Ns' oppure 'N serie x N ripetizioni x Nm'. Ogni esercizio DEVE avere setup, execution, rotation e totalDurationEstimate (~N min). Se richiesti parte cognitiva, BlazePod o Buzzoni, almeno un drill deve rispettare esplicitamente tali vincoli. Se la modalità è 'Con attrezzi', almeno il 70% dei drill deve usare elastici, palle mediche, bastoni o step. Le sessioni della stessa scheda devono essere realmente diverse: no warm-up duplicati, no mainBlock fotocopia, no rinomina superficiale."
+    }
+  }, getModels());
+  const data = normalizeTrainingPlan(raw, prefs);
 
-    const text = response.text;
-    if (!text) throw new Error("No response from AI");
+  // Client-side hard guards for consistency
+  data.sessions = data.sessions.map((session, index) => ({
+    ...session,
+    warmup: session.warmup || buildWarmupBlock(prefs, index),
+  }));
+  ensureSelectedCoverage(data, prefs);
+  data.sessions = data.sessions.map((session) => ({
+    ...session,
+    mainBlock: session.mainBlock.map((drill) => enrichOperationalFields(drill, prefs))
+  }));
+  enforceCrossSessionVariety(data);
 
-    const data = JSON.parse(text) as WeeklyPlan;
-
-    // Client-side hard guards for consistency
-    data.location = prefs.location;
-    data.equipmentMode = prefs.equipmentMode;
-    data.sessions = (data.sessions || []).map((s, index) => ({
-      ...s,
-      totalDuration: normalizeMainDuration(s.totalDuration),
-      warmup: buildWarmupBlock(prefs, index),
-      location: prefs.location,
-      mainBlock: (s.mainBlock || []).map((d) => ({
-        ...d,
-        location: prefs.location
-      }))
-    }));
-    ensureSelectedCoverage(data, prefs);
-    data.sessions = (data.sessions || []).map((session) => ({
-      ...session,
-      mainBlock: (session.mainBlock || []).map((drill) => enrichOperationalFields(drill, prefs))
-    }));
-    enforceCrossSessionVariety(data);
-
-    return data;
-  } catch (error) {
-    console.error("Error generating plan:", error);
-    throw error;
-  }
+  return data;
 };
+
+let lessonVariation = Math.floor(Math.random() * 1000);
+const recentLessons = new Map<string, string[]>();
 
 export const generateLessonPlan = async (prefs: LessonPreferences): Promise<LessonPlan> => {
   const apiKey = getApiKeyOrThrow();
   const genAI = new GoogleGenAI({ apiKey: apiKey });
-  const model = "gemini-3-flash-preview";
-
-  const prompt = `
-    Sei un Maestro di ${prefs.sport} (Coach) certificato.
-    Crea un piano di lezione (${prefs.duration} minuti) per una lezione ${prefs.mode}.
-    Livello allievi: ${prefs.level}.
-    Focus Tecnico/Tattico: ${prefs.focus}.
-
-    Struttura richiesta:
-    1. Riscaldamento Tecnico (palleggio in minitennis o controllato).
-    2. Esercizi al Cesto (Basket Drills): Fondamentali per correggere la tecnica o creare ritmo. Descrivi come il maestro deve lanciare la palla e cosa deve fare l'allievo.
-    3. Esercizi Live / Situazionali: Scambio tra allievi o con il maestro in gioco.
-    4. Gioco Finale: Punti o tie-break con regole o vincoli specifici.
-
-    Considerazioni Importanti:
-    - Sport: ${prefs.sport}. Se Padel, includi pareti e vetri dove serve.
-    - Modalità: ${prefs.mode}. 
-      Se 'Gruppo (3 giocatori)': Sfrutta schemi 2 contro 1 (es. "Americano"), o rotazioni rapide dove il maestro gioca in coppia.
-      Se 'Gruppo (4 giocatori)': Crea situazioni di DOPPIO REALE. Lavora su tattiche di coppia, sincronia a rete/fondo.
-      Se 'Coppia', lavora sulla sintonia.
-    - Attrezzatura: Cesto, Racchetta/Pala, Coni.
-    - Lingua: ITALIANO.
-  `;
-
-  try {
-    const response = await genAI.models.generateContent({
-      model: model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: lessonPlanSchema,
-        systemInstruction: "Sei un maestro di tennis/padel esperto. Crea lezioni dinamiche e ben strutturate."
-      }
-    });
-
-    const text = response.text;
-    if (!text) throw new Error("No response from AI");
-
-    const data = JSON.parse(text) as LessonPlan;
-    // Inject user selections back into the object for consistency
-    data.sport = prefs.sport;
-    data.mode = prefs.mode;
-    data.level = prefs.level;
-    data.duration = prefs.duration;
-
-    return data;
-  } catch (error) {
-    console.error("Error generating lesson:", error);
-    throw error;
-  }
+  const historyKey = JSON.stringify(prefs);
+  const history = recentLessons.get(historyKey) || [];
+  const prompt = buildLessonPrompt(prefs, lessonVariation++, history);
+  const raw = await requestAIJson((params) => genAI.models.generateContent(params), {
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: lessonPlanSchema,
+      temperature: 0.9,
+      maxOutputTokens: 16384,
+      systemInstruction: "Sei un maestro di tennis/padel esperto. Crea lezioni varie, progressive, dettagliate e sicure, in italiano. Rispetta lo schema JSON e il numero di allievi."
+    }
+  }, getModels());
+  const data = normalizeLessonPlan(raw, prefs);
+  recentLessons.delete(historyKey);
+  recentLessons.set(historyKey, [...history, lessonSummary(data)].slice(-3));
+  if (recentLessons.size > 20) recentLessons.delete(recentLessons.keys().next().value!);
+  return data;
 };

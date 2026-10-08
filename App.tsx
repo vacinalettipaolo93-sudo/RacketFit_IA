@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { generateTrainingPlan, generateLessonPlan, getStoredApiKey, saveApiKey, removeApiKey, hasEnvApiKey } from './services/geminiService';
+import { GenerationError, generationErrorMessage } from './services/aiResponse';
 import { UserPreferences, WeeklyPlan, SavedPlan, LessonPreferences, LessonPlan, SavedLessonPlan, GroupSize, EquipmentMode } from './types';
 import { InputForm } from './components/InputForm';
 import { PlanDisplay } from './components/PlanDisplay';
@@ -116,14 +117,9 @@ const App: React.FC = () => {
     try {
       const generatedPlan = await generateTrainingPlan(prefs);
       setPlan(generatedPlan);
-    } catch (err: any) {
-      console.error(err);
-      if (err.message === 'API_KEY_MISSING') {
-        setError("Chiave API mancante. Configurala nelle impostazioni.");
-        setShowSettings(true); 
-      } else {
-        setError("Si è verificato un errore durante la generazione. Verifica la connessione.");
-      }
+    } catch (err: unknown) {
+      setError(generationErrorMessage(err));
+      if (err instanceof GenerationError && err.code === 'API_KEY_MISSING') setShowSettings(true);
     } finally {
       setIsLoading(false);
     }
@@ -135,14 +131,9 @@ const App: React.FC = () => {
     try {
       const generatedLesson = await generateLessonPlan(prefs);
       setLessonPlan(generatedLesson);
-    } catch (err: any) {
-      console.error(err);
-      if (err.message === 'API_KEY_MISSING') {
-        setError("Chiave API mancante. Configurala nelle impostazioni.");
-        setShowSettings(true);
-      } else {
-        setError("Errore generazione lezione. Riprova.");
-      }
+    } catch (err: unknown) {
+      setError(generationErrorMessage(err));
+      if (err instanceof GenerationError && err.code === 'API_KEY_MISSING') setShowSettings(true);
     } finally {
       setIsLoading(false);
     }
@@ -499,7 +490,7 @@ const App: React.FC = () => {
         
         {/* Error Message */}
         {error && (
-          <div className="max-w-xl mx-auto mb-8 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex flex-col items-center justify-center text-center gap-2">
+          <div role="alert" className="max-w-xl mx-auto mb-8 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 flex flex-col items-center justify-center text-center gap-2">
             <p>{error}</p>
             {error.includes("Chiave API") && (
               <Button variant="secondary" onClick={() => setShowSettings(true)} className="py-1 px-4 text-sm">

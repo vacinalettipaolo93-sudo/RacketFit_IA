@@ -98,6 +98,11 @@ export interface Drill {
   rotation?: string;
   // NEW: durata totale stimata dell'esercizio incluso recupero (es: "~5 min", "~7 min")
   totalDurationEstimate?: string;
+  objective?: string;
+  coachRole?: string;
+  commonErrors?: string;
+  safety?: string;
+  adaptations?: string;
 }
 
 export interface WarmupBlock {
@@ -150,6 +155,7 @@ export interface LessonPlan {
   basketDrills: Drill[]; // Cesto exercises
   liveDrills: Drill[]; // Live ball / Situational
   finalGame: string; // Points or game logic
+  timeBudget?: { warmupMinutes: number; finalGameMinutes: number };
 }
 
 export type WarmupType = 'Normale' | 'Gioco';
