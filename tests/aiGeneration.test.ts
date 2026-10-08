@@ -38,7 +38,7 @@ const training = () => ({
   weeklyGoal: 'Velocità controllata', advice: 'Interrompi in caso di dolore.',
   sessions: [{
     dayName: 'Lunedì', focusArea: 'Agilità', totalDuration: '50 min',
-    mainBlock: [drill()],
+    mainBlock: Array.from({ length: 5 }, (_, i) => ({ ...drill(), name: `Stazione ${i + 1}` })),
   }],
 });
 const lesson = () => ({
@@ -46,6 +46,7 @@ const lesson = () => ({
   basketDrills: [drill(), { ...drill(), name: 'Bersagli corti' }],
   liveDrills: [{ ...drill(), name: 'Difesa e rete' }, { ...drill(), name: 'Cambio lato' }],
   finalGame: 'Conquista territori: 10 min. Bonus per volée nella porta; raccolta al segnale.',
+  timeBudget: { warmupMinutes: 10, finalGameMinutes: 10 },
 });
 const errorCode = (code: string) => (error: unknown) => error instanceof GenerationError && error.code === code;
 const response = (text: string) => Object.assign(new GenerateContentResponse(), {
@@ -87,6 +88,34 @@ test('normalizzazione applica preferenze e scarta campi opzionali non validi', (
   assert.equal(weekly.location, 'Campo');
   assert.equal(weekly.equipmentMode, fitnessPrefs.equipmentMode);
   assert.throws(() => normalizeTrainingPlan(training(), { ...fitnessPrefs, sessionsPerWeek: SessionCount.TWO }), errorCode('INCOMPLETE_RESPONSE'));
+});
+test('rifiuta tempi mancanti o budget incoerenti invece di etichettarli come completi', () => {
+  const partial = { ...training(), sessions: [{ ...training().sessions[0], mainBlock: [drill()] }] };
+  assert.throws(() => normalizeTrainingPlan(partial, fitnessPrefs), errorCode('INCOMPLETE_RESPONSE'));
+  for (const changes of [{ totalDurationEstimate: undefined }, { totalDurationEstimate: '~0 min' },
+    { totalDurationEstimate: 'circa dieci' }, { durationOrReps: '10 min' }]) {
+    assert.throws(() => normalizeTrainingPlan({ ...training(), sessions: [{
+      ...training().sessions[0], mainBlock: [{ ...drill(), ...changes }],
+    }] }, fitnessPrefs), errorCode('INCOMPLETE_RESPONSE'));
+  }
+  for (const timeBudget of [undefined, { warmupMinutes: 5, finalGameMinutes: 5 },
+    { warmupMinutes: '10', finalGameMinutes: 10 }, { warmupMinutes: 10, finalGameMinutes: -10 }]) {
+    assert.throws(() => normalizeLessonPlan({ ...lesson(), timeBudget }, lessonPrefs), errorCode('INCOMPLETE_RESPONSE'));
+  }
+  assert.throws(() => normalizeLessonPlan(lesson(), { ...lessonPrefs, duration: '90' }), errorCode('INCOMPLETE_RESPONSE'));
+});
+test('warm-up AI valido mantenuto, tempi errati/incompleti lasciano usare il fallback sicuro', () => {
+  const warmup = {
+    duration: '10 min', title: 'Warm-up nuovo', description: 'Attivazione', setup: '4 coni',
+    execution: 'Specchio e mobilità', rotation: 'Alternanza',
+    timePlan: '0-2 min: mobilità; 2-5 min: specchio; 5-8 min: diagonali; 8-10 min: progressione',
+  };
+  const plan = (value: unknown) => ({ ...training(), sessions: [{ ...training().sessions[0], warmup: value }] });
+  assert.equal(normalizeTrainingPlan(plan(warmup), fitnessPrefs).sessions[0].warmup?.title, 'Warm-up nuovo');
+  for (const value of [{ ...warmup, duration: '20 min' }, { ...warmup, timePlan: '20 min: lavoro' },
+    { ...warmup, timePlan: '0-5 min: mobilità; 6-10 min: gioco' }, { ...warmup, setup: undefined }]) {
+    assert.equal(normalizeTrainingPlan(plan(value), fitnessPrefs).sessions[0].warmup, undefined);
+  }
 });
 test('API/modello: fallback solo se indisponibile, nessun dettaglio sensibile esposto', async () => {
   const called: string[] = [];
@@ -178,7 +207,9 @@ test('flussi reali del servizio tramite SDK con fetch simulato (nessuna chiamata
     const content = JSON.stringify(plan).toLowerCase();
     for (const word of ['blazepod', 'buzzoni', 'segnale']) assert.ok(content.includes(word));
     assert.ok(plan.sessions[0].mainBlock[0].setup);
-    output = { ...training(), sessions: [{ ...training().sessions[0], totalDuration: '55 min' }] };
+    output = { ...training(), sessions: [{ ...training().sessions[0], totalDuration: '55 min',
+      mainBlock: training().sessions[0].mainBlock.map((drill, i) => ({ ...drill, totalDurationEstimate: i === 0 ? '~15 min' : '~10 min' })),
+    }] };
     const noWarmup = await generateTrainingPlan({ ...fitnessPrefs, includeWarmup: false });
     assert.equal(noWarmup.sessions[0].totalDuration, '55 min');
     assert.equal(noWarmup.sessions[0].warmup, undefined);

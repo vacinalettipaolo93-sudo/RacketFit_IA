@@ -61,7 +61,7 @@ const trainingPlanSchema: Schema = {
               setup: { type: Type.STRING },
               execution: { type: Type.STRING },
               rotation: { type: Type.STRING },
-              timePlan: { type: Type.STRING },
+              timePlan: { type: Type.STRING, description: "Intervalli contigui da 0 a 10: '0-2 min: ...; 2-5 min: ...; 5-8 min: ...; 8-10 min: ...'" },
               equipment: { type: Type.STRING },
               isExtra: { type: Type.BOOLEAN, description: "Must be true, warm-up is extra rispetto al blocco principale" }
             }
@@ -104,7 +104,7 @@ const trainingPlanSchema: Schema = {
                   description: "Durata totale stimata dell'esercizio incluso recupero tra le serie (es: '~5 min', '~7 min'). Calcola in secondi: (serie × rip × tempo_rep_sec) + (serie × recupero_sec), poi converti in minuti."
                 }
               },
-              required: ["name", "description", "durationOrReps", "rest"]
+              required: ["name", "description", "durationOrReps", "rest", "totalDurationEstimate"]
             }
           }
         },
@@ -140,6 +140,14 @@ const lessonPlanSchema: Schema = {
     mode: { type: Type.STRING },
     level: { type: Type.STRING },
     duration: { type: Type.STRING },
+    timeBudget: {
+      type: Type.OBJECT,
+      properties: {
+        warmupMinutes: { type: Type.NUMBER },
+        finalGameMinutes: { type: Type.NUMBER },
+      },
+      required: ['warmupMinutes', 'finalGameMinutes'],
+    },
     warmup: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
@@ -157,7 +165,7 @@ const lessonPlanSchema: Schema = {
     },
     finalGame: { type: Type.STRING, description: "Description of the final game or points structure" }
   },
-  required: ["title", "warmup", "basketDrills", "liveDrills", "finalGame"]
+  required: ["title", "warmup", "basketDrills", "liveDrills", "finalGame", "timeBudget"]
 };
 
 const getEquipmentRules = (prefs: UserPreferences): string => {
@@ -727,6 +735,8 @@ CAMPO "totalDurationEstimate" (OBBLIGATORIO per ogni esercizio):
 - Formula: (N_serie × N_rip × tempo_per_rep_in_sec) + (N_serie × recupero_in_sec) = totale in secondi → converti in minuti.
 - Esempio: 3 serie x 6 rep x 15s + recupero 45s = (3×6×15) + (3×45) = 270+135 = 405s ≈ "~7 min"
 - Arrotonda al minuto più vicino, usa il formato "~N min".
+- La somma dei totalDurationEstimate di tutte le stazioni, inclusi recuperi e cambi,
+  deve corrispondere ai 50/55 minuti del blocco principale; non basta scrivere l'etichetta.
 
 CAMPI OPERATIVI DELLA STAZIONE (OBBLIGATORI per ogni esercizio):
 - "setup": descrivi come preparare praticamente l'esercizio sul campo.

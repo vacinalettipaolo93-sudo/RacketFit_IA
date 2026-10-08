@@ -34,6 +34,32 @@ const optionalText = (value: unknown): string | undefined =>
 const list = (value: unknown, path: string): unknown[] =>
   Array.isArray(value) && value.length > 0 ? value : incomplete(path);
 
+const minutes = (value: unknown, path: string): number => {
+  const match = text(value, path).match(/^~?(\d+(?:[.,]\d+)?)\s*min(?:uti)?$/i);
+  const result = match ? Number(match[1].replace(',', '.')) : 0;
+  return result > 0 && Number.isFinite(result) ? result : incomplete(`${path} (minuti positivi)`);
+};
+
+const numericMinutes = (value: unknown, path: string): number =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : incomplete(path);
+
+const assertBudget = (total: number, expected: number, path: string): void => {
+  if (Math.abs(total - expected) > 0.01) incomplete(`${path}: ${total} minuti invece di ${expected}`);
+};
+
+const warmupMinutes = (plan: string): number => {
+  const ranges = [...plan.matchAll(/(\d+)\s*[-–]\s*(\d+)\s*min(?:uti)?\b/gi)];
+  if (ranges.length) {
+    let end = 0;
+    for (const range of ranges) {
+      if (Number(range[1]) !== end || Number(range[2]) <= end) return 0;
+      end = Number(range[2]);
+    }
+    return end;
+  }
+  return [...plan.matchAll(/(\d+)\s*min(?:uti)?\b/gi)].reduce((sum, item) => sum + Number(item[1]), 0);
+};
+
 export const parseAIJson = (response: unknown): unknown => {
   if (typeof response !== 'string' || !response.trim()) {
     throw new GenerationError('EMPTY_RESPONSE', 'L’AI ha restituito una risposta vuota o bloccata. Riprova dal modulo con un focus più specifico.');
@@ -70,6 +96,7 @@ const normalizeWarmup = (value: unknown, prefs: UserPreferences): WarmupBlock | 
   const data = object(value, 'warmup');
   const fields = ['title', 'description', 'setup', 'execution', 'rotation', 'timePlan'] as const;
   if (fields.some((field) => !optionalText(data[field]))) return undefined;
+  if (data.duration !== '10 min' || warmupMinutes(text(data.timePlan, 'warmup.timePlan')) !== 10) return undefined;
   return {
     duration: '10 min', type: prefs.warmupType, isExtra: true,
     title: text(data.title, 'warmup.title'), description: text(data.description, 'warmup.description'),
@@ -93,14 +120,22 @@ export const normalizeTrainingPlan = (value: unknown, prefs: UserPreferences): W
       const duration = text(session.totalDuration, `${path}.totalDuration`);
       if (duration !== '50 min' && duration !== '55 min') return incomplete(`${path}.totalDuration (50/55 min)`);
       const warmup = normalizeWarmup(session.warmup, prefs);
+      const mainBlock = list(session.mainBlock, `${path}.mainBlock`).map((value, i) => {
+        const drillPath = `${path}.mainBlock[${i}]`;
+        const drill = normalizeDrill(value, drillPath);
+        if (!/^[1-9]\d*\s*serie\s*[x×]\s*[1-9]\d*\s*ripetizioni\s*[x×]\s*[1-9]\d*\s*[sm]$/i.test(drill.durationOrReps)) {
+          return incomplete(`${drillPath}.durationOrReps (serie x ripetizioni x secondi/metri)`);
+        }
+        return { ...drill, location: prefs.location };
+      });
+      assertBudget(mainBlock.reduce((sum, drill, i) => sum + minutes(drill.totalDurationEstimate, `${path}.mainBlock[${i}].totalDurationEstimate`), 0),
+        minutes(duration, `${path}.totalDuration`), `${path}.durata blocco principale`);
       return {
         dayName: text(session.dayName, `${path}.dayName`),
         focusArea: text(session.focusArea, `${path}.focusArea`),
         totalDuration: duration, location: prefs.location,
         ...(warmup ? { warmup } : {}),
-        mainBlock: list(session.mainBlock, `${path}.mainBlock`).map((drill, i) => ({
-          ...normalizeDrill(drill, `${path}.mainBlock[${i}]`), location: prefs.location,
-        })),
+        mainBlock,
       };
     }),
   };
@@ -108,12 +143,22 @@ export const normalizeTrainingPlan = (value: unknown, prefs: UserPreferences): W
 
 export const normalizeLessonPlan = (value: unknown, prefs: LessonPreferences): LessonPlan => {
   const data = object(value, 'lezione');
+  const budget = object(data.timeBudget, 'timeBudget');
+  const timeBudget = {
+    warmupMinutes: numericMinutes(budget.warmupMinutes, 'timeBudget.warmupMinutes'),
+    finalGameMinutes: numericMinutes(budget.finalGameMinutes, 'timeBudget.finalGameMinutes'),
+  };
+  const warmup = list(data.warmup, 'warmup').map((value, i) => text(value, `warmup[${i}]`));
+  const basketDrills = list(data.basketDrills, 'basketDrills').map((value, i) => normalizeDrill(value, `basketDrills[${i}]`, true));
+  const liveDrills = list(data.liveDrills, 'liveDrills').map((value, i) => normalizeDrill(value, `liveDrills[${i}]`, true));
+  if (warmup.length < 2 || basketDrills.length < 2 || liveDrills.length < 2) return incomplete('almeno 2 attività per sezione');
+  const drillMinutes = [...basketDrills, ...liveDrills].reduce((sum, drill, i) =>
+    sum + minutes(drill.totalDurationEstimate, `esercizi[${i}].totalDurationEstimate`), 0);
+  assertBudget(timeBudget.warmupMinutes + drillMinutes + timeBudget.finalGameMinutes, Number(prefs.duration), 'durata della lezione');
   return {
     title: text(data.title, 'title'),
     sport: prefs.sport, mode: prefs.mode, level: prefs.level, duration: prefs.duration,
-    warmup: list(data.warmup, 'warmup').map((value, i) => text(value, `warmup[${i}]`)),
-    basketDrills: list(data.basketDrills, 'basketDrills').map((value, i) => normalizeDrill(value, `basketDrills[${i}]`, true)),
-    liveDrills: list(data.liveDrills, 'liveDrills').map((value, i) => normalizeDrill(value, `liveDrills[${i}]`, true)),
+    warmup, basketDrills, liveDrills, timeBudget,
     finalGame: text(data.finalGame, 'finalGame'),
   };
 };

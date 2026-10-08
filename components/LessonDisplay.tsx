@@ -80,6 +80,7 @@ export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, o
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 page-break-inside-avoid">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <PlayCircle className="text-indigo-500" /> Riscaldamento Tecnico
+            {lesson.timeBudget && <span className="text-sm font-normal">({lesson.timeBudget.warmupMinutes} min)</span>}
           </h3>
           <div className="bg-gray-50 rounded-xl p-4 text-gray-700">
              <ul className="list-disc list-inside space-y-2">
@@ -140,6 +141,7 @@ export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, o
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 page-break-inside-avoid">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <CheckCircle className="text-blue-500" /> Partita Finale
+            {lesson.timeBudget && <span className="text-sm font-normal">({lesson.timeBudget.finalGameMinutes} min)</span>}
           </h3>
           <div className="bg-blue-50 rounded-xl p-4 text-blue-900 text-sm leading-relaxed whitespace-pre-line">
             {lesson.finalGame}

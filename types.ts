@@ -155,6 +155,7 @@ export interface LessonPlan {
   basketDrills: Drill[]; // Cesto exercises
   liveDrills: Drill[]; // Live ball / Situational
   finalGame: string; // Points or game logic
+  timeBudget?: { warmupMinutes: number; finalGameMinutes: number };
 }
 
 export type WarmupType = 'Normale' | 'Gioco';

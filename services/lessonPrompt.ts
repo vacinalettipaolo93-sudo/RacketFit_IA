@@ -30,6 +30,8 @@ STRUTTURA E TEMPI:
 - finalGame: spiega setup, regole, punteggio, vincolo tattico, rotazioni e durata.
 - La somma dei tempi warm-up, esercizi (totalDurationEstimate, recupero e cambi inclusi) e gioco
   deve essere ESATTAMENTE ${prefs.duration} minuti; esplicita la ripartizione.
+- timeBudget: warmupMinutes e finalGameMinutes sono numeri positivi; devono corrispondere
+  ai tempi descritti nelle stringhe warmup e finalGame. totalDurationEstimate usa "~N min".
 
 DETTAGLI OBBLIGATORI PER OGNI DRILL:
 - objective: obiettivo osservabile collegato a ${prefs.focus} e criterio di riuscita.

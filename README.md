@@ -43,6 +43,10 @@ memoria e si azzera ricaricando la pagina. La varietà del contenuto finale dipe
 comunque dal modello. I vecchi piani salvati restano visualizzabili.
 La preparazione mantiene il blocco principale da 50/55 minuti e il warm-up
 opzionale da 10 minuti extra, con copertura cognitiva/BlazePod/Buzzoni selezionata.
+I tempi stimati delle stazioni devono sommare al blocco principale; nelle lezioni
+il budget di warm-up e gioco finale più i tempi degli esercizi deve sommare a
+60/90 minuti. Tempi mancanti o incoerenti vengono rifiutati, non semplicemente
+rietichettati. Un warm-up AI con ripartizione errata usa il fallback da 10 minuti.
 
 **Sicurezza:** questa è un’app client-side: una chiave configurata via ambiente
 viene inclusa nel bundle, e quella inserita nell’app è salvata in localStorage.
