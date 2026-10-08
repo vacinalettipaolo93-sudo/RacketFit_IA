@@ -151,7 +151,7 @@ const lessonPlanSchema: Schema = {
     warmup: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "Attività varie con obiettivo, setup, esecuzione, ruoli, tempi e sicurezza"
+      description: "Ogni attività inizia con 'Durata: N min.' e include obiettivo, setup, esecuzione, ruoli e sicurezza"
     },
     basketDrills: {
       type: Type.ARRAY,
@@ -163,7 +163,7 @@ const lessonPlanSchema: Schema = {
       items: lessonDrillSchema,
       description: "Cooperative or competitive drills with live ball"
     },
-    finalGame: { type: Type.STRING, description: "Description of the final game or points structure" }
+    finalGame: { type: Type.STRING, description: "Inizia con 'Durata: N min.' e descrivi setup, regole, punteggio, rotazioni e sicurezza" }
   },
   required: ["title", "warmup", "basketDrills", "liveDrills", "finalGame", "timeBudget"]
 };

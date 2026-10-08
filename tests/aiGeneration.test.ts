@@ -42,10 +42,10 @@ const training = () => ({
   }],
 });
 const lesson = () => ({
-  title: 'Volée e recupero', warmup: ['Attivazione specchio: 5 min.', 'Bersagli progressivi: 5 min.'],
+  title: 'Volée e recupero', warmup: ['Durata: 5 min. Attivazione specchio.', 'Durata: 5 min. Bersagli progressivi.'],
   basketDrills: [drill(), { ...drill(), name: 'Bersagli corti' }],
   liveDrills: [{ ...drill(), name: 'Difesa e rete' }, { ...drill(), name: 'Cambio lato' }],
-  finalGame: 'Conquista territori: 10 min. Bonus per volée nella porta; raccolta al segnale.',
+  finalGame: 'Durata: 10 min. Conquista territori. Bonus per volée nella porta; raccolta al segnale.',
   timeBudget: { warmupMinutes: 10, finalGameMinutes: 10 },
 });
 const errorCode = (code: string) => (error: unknown) => error instanceof GenerationError && error.code === code;
@@ -103,6 +103,15 @@ test('rifiuta tempi mancanti o budget incoerenti invece di etichettarli come com
     assert.throws(() => normalizeLessonPlan({ ...lesson(), timeBudget }, lessonPrefs), errorCode('INCOMPLETE_RESPONSE'));
   }
   assert.throws(() => normalizeLessonPlan(lesson(), { ...lessonPrefs, duration: '90' }), errorCode('INCOMPLETE_RESPONSE'));
+  assert.throws(() => normalizeLessonPlan({
+    ...lesson(), timeBudget: { warmupMinutes: 40, finalGameMinutes: 10 },
+  }, { ...lessonPrefs, duration: '90' }), errorCode('INCOMPLETE_RESPONSE'));
+  assert.throws(() => normalizeLessonPlan({ ...lesson(), finalGame: 'Durata: 20 min. Gioco.' }, lessonPrefs), errorCode('INCOMPLETE_RESPONSE'));
+  const ninety = {
+    ...lesson(), timeBudget: { warmupMinutes: 20, finalGameMinutes: 30 },
+    warmup: ['Durata: 10 min. Mobilità.', 'Durata: 10 min. Scambi.'], finalGame: 'Durata: 30 min. Gioco a obiettivi.',
+  };
+  assert.equal(normalizeLessonPlan(ninety, { ...lessonPrefs, duration: '90' }).duration, '90');
 });
 test('warm-up AI valido mantenuto, tempi errati/incompleti lasciano usare il fallback sicuro', () => {
   const warmup = {

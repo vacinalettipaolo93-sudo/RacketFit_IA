@@ -32,6 +32,10 @@ STRUTTURA E TEMPI:
   deve essere ESATTAMENTE ${prefs.duration} minuti; esplicita la ripartizione.
 - timeBudget: warmupMinutes e finalGameMinutes sono numeri positivi; devono corrispondere
   ai tempi descritti nelle stringhe warmup e finalGame. totalDurationEstimate usa "~N min".
+- OGNI stringa warmup e la stringa finalGame iniziano con "Durata: N min.":
+  è il tempo totale operativo, recuperi/cambi inclusi, non un titolo generico.
+  La somma delle durate dichiarate nei warmup deve essere warmupMinutes;
+  la durata dichiarata in finalGame deve essere finalGameMinutes.
 
 DETTAGLI OBBLIGATORI PER OGNI DRILL:
 - objective: obiettivo osservabile collegato a ${prefs.focus} e criterio di riuscita.

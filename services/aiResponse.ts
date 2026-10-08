@@ -43,6 +43,11 @@ const minutes = (value: unknown, path: string): number => {
 const numericMinutes = (value: unknown, path: string): number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : incomplete(path);
 
+const activityMinutes = (value: string, path: string): number => {
+  const match = value.match(/^Durata:\s*(\d+(?:[.,]\d+)?)\s*min(?:uti)?\b/i);
+  return match ? minutes(`${match[1]} min`, path) : incomplete(`${path} (inizia con "Durata: N min.")`);
+};
+
 const assertBudget = (total: number, expected: number, path: string): void => {
   if (Math.abs(total - expected) > 0.01) incomplete(`${path}: ${total} minuti invece di ${expected}`);
 };
@@ -149,6 +154,10 @@ export const normalizeLessonPlan = (value: unknown, prefs: LessonPreferences): L
     finalGameMinutes: numericMinutes(budget.finalGameMinutes, 'timeBudget.finalGameMinutes'),
   };
   const warmup = list(data.warmup, 'warmup').map((value, i) => text(value, `warmup[${i}]`));
+  const finalGame = text(data.finalGame, 'finalGame');
+  assertBudget(warmup.reduce((sum, activity, i) => sum + activityMinutes(activity, `warmup[${i}]`), 0),
+    timeBudget.warmupMinutes, 'tempi del riscaldamento descritti');
+  assertBudget(activityMinutes(finalGame, 'finalGame'), timeBudget.finalGameMinutes, 'tempo del gioco finale descritto');
   const basketDrills = list(data.basketDrills, 'basketDrills').map((value, i) => normalizeDrill(value, `basketDrills[${i}]`, true));
   const liveDrills = list(data.liveDrills, 'liveDrills').map((value, i) => normalizeDrill(value, `liveDrills[${i}]`, true));
   if (warmup.length < 2 || basketDrills.length < 2 || liveDrills.length < 2) return incomplete('almeno 2 attività per sezione');
@@ -159,7 +168,7 @@ export const normalizeLessonPlan = (value: unknown, prefs: LessonPreferences): L
     title: text(data.title, 'title'),
     sport: prefs.sport, mode: prefs.mode, level: prefs.level, duration: prefs.duration,
     warmup, basketDrills, liveDrills, timeBudget,
-    finalGame: text(data.finalGame, 'finalGame'),
+    finalGame,
   };
 };
 
