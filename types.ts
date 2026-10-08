@@ -98,6 +98,11 @@ export interface Drill {
   rotation?: string;
   // NEW: durata totale stimata dell'esercizio incluso recupero (es: "~5 min", "~7 min")
   totalDurationEstimate?: string;
+  objective?: string;
+  coachRole?: string;
+  commonErrors?: string;
+  safety?: string;
+  adaptations?: string;
 }
 
 export interface WarmupBlock {

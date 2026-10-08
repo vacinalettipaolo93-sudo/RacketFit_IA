@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { LessonPlan } from '../types';
+import { Drill, LessonPlan } from '../types';
 import { Button } from './Button';
 import { Download, PlayCircle, Users, Clock, CheckCircle, Disc, Save, Check } from 'lucide-react';
 
@@ -9,6 +9,29 @@ interface LessonDisplayProps {
   onReset: () => void;
   onSave?: (lesson: LessonPlan) => void;
 }
+
+const DrillDetails: React.FC<{ drill: Drill }> = ({ drill }) => (
+  <dl className="mt-3 space-y-2 text-sm text-gray-700">
+    {([
+      ['Obiettivo', drill.objective],
+      ['Materiali', drill.equipment],
+      ['Setup e partenza', drill.setup],
+      ['Esecuzione passo-passo', drill.execution],
+      ['Ruolo del maestro', drill.coachRole],
+      ['Rotazioni', drill.rotation],
+      ['Recupero', drill.rest],
+      ['Durata totale', drill.totalDurationEstimate],
+      ['Errori comuni e correzioni', drill.commonErrors],
+      ['Sicurezza', drill.safety],
+      ['Adattamenti', drill.adaptations],
+    ]).map(([label, value]) => value ? (
+      <div key={label}>
+        <dt className="font-semibold">{label}</dt>
+        <dd className="whitespace-pre-line leading-relaxed">{value}</dd>
+      </div>
+    ) : null)}
+  </dl>
+);
 
 export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
@@ -61,7 +84,7 @@ export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, o
           <div className="bg-gray-50 rounded-xl p-4 text-gray-700">
              <ul className="list-disc list-inside space-y-2">
                {lesson.warmup.map((item, i) => (
-                 <li key={i}>{item}</li>
+                 <li key={i} className="whitespace-pre-line leading-relaxed">{item}</li>
                ))}
              </ul>
           </div>
@@ -82,6 +105,7 @@ export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, o
                     </span>
                  </div>
                  <p className="text-gray-700 text-sm mb-2">{drill.description}</p>
+                 <DrillDetails drill={drill} />
                  {drill.notes && (
                    <p className="text-xs text-orange-700 italic">💡 Coach Tip: {drill.notes}</p>
                  )}
@@ -105,6 +129,8 @@ export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, o
                     </span>
                  </div>
                  <p className="text-gray-700 text-sm">{drill.description}</p>
+                 <DrillDetails drill={drill} />
+                 {drill.notes && <p className="mt-2 text-xs text-green-700 italic">💡 Coach Tip: {drill.notes}</p>}
                </div>
              ))}
           </div>
@@ -115,7 +141,7 @@ export const LessonDisplay: React.FC<LessonDisplayProps> = ({ lesson, onReset, o
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <CheckCircle className="text-blue-500" /> Partita Finale
           </h3>
-          <div className="bg-blue-50 rounded-xl p-4 text-blue-900 text-sm leading-relaxed">
+          <div className="bg-blue-50 rounded-xl p-4 text-blue-900 text-sm leading-relaxed whitespace-pre-line">
             {lesson.finalGame}
           </div>
         </div>
